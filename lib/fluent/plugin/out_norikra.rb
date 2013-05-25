@@ -36,6 +36,9 @@ module Fluent
     def configure(conf)
       super
 
+      @host,@port = @norikra.split(':', 2)
+      @port = @port.to_i
+
       if !@target_map_tag && @target_map_key.nil? && @target_string.nil?
         raise Fluent::ConfigError, 'target naming not specified (target_map_tag/target_map_key/target_string)'
       end
@@ -72,8 +75,8 @@ module Fluent
         end
       end
 
+      @event_method = @event_tag_generator = @event_sweep_interval = nil
       if event_section
-        #attr_reader :event_method, :event_tag_generator, :event_sweep_interval
         @event_method = case event_section['method']
                         when 'sweep' then :sweep
                         when 'listen'
@@ -104,6 +107,9 @@ module Fluent
     end
 
     def start
+      @started = false
+      @sending_targets = {}
+      @fetch_order = []
       # start norikra server if needed
       # create client instance and check connectivity (what way to wait server execution?)
       # event fetcher thread
@@ -112,6 +118,16 @@ module Fluent
     def shutdown
       # stop fetcher
       # stop server if needed
+    end
+
+    def server_starter
+      
+    end
+
+    def register_worker
+    end
+
+    def fetch_worker
     end
 
     def format(tag, time, record)
@@ -125,12 +141,23 @@ module Fluent
       [target,event].to_msgpack
     end
 
+    def prepared?(targets)
+      @started && targets.reduce(true){|r,t| r && @sending_targets[t]}
+    end
+
     def write(chunk)
+      @client = Norikra::Client.new(@host, @port)
+
       events = {} # target => [event]
       chunk.msgpack_each do |target, event|
         events[target] ||= []
         events[target].push(event)
       end
+
+      unless prepared?(events.keys)
+        raise RuntimeError, "norikra server is not ready for this targets: #{events.keys.join(',')}"
+      end
+
       events.keys.each do |target|
         @client.send(target, events)
       end
