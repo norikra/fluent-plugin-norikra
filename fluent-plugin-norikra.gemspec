@@ -5,8 +5,8 @@ Gem::Specification.new do |spec|
   spec.version       = "0.0.1"
   spec.authors       = ["TAGOMORI Satoshi"]
   spec.email         = ["tagomoris@gmail.com"]
-  spec.description   = %q{TODO: Write a gem description}
-  spec.summary       = %q{TODO: Write a gem summary}
+  spec.description   = %q{process events on fluentd with SQL like query, with built-in Norikra server if needed.}
+  spec.summary       = %q{Fluentd plugin to do CEP with norikra}
   spec.homepage      = "https://github.com/tagomoris/fluent-plugin-norikra"
   spec.license       = "APLv2"
 
