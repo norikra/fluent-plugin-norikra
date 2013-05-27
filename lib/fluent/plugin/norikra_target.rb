@@ -168,6 +168,9 @@ class Fluent::NorikraOutput
     end
 
     def +(other)
+      if other.nil?
+        other = self.class.new(Fluent::Config::Element.new('target', 'dummy', {}, []))
+      end
       r = self.class.new(Fluent::Config::Element.new('target', (other.target ? other.target : self.target), {}, []))
       others_filter = {}
       other.filter_params.keys.each do |k|
