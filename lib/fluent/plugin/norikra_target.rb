@@ -1,11 +1,12 @@
 class Fluent::NorikraOutput
   class Query
-    attr_accessor :name, :expression, :tag
+    attr_accessor :name, :expression, :tag, :interval
 
-    def initialize(name, expression, tag)
+    def initialize(name, expression, tag, interval)
       @name = name
       @expression = expression
       @tag = tag
+      @interval = interval
     end
   end
 
@@ -34,7 +35,8 @@ class Fluent::NorikraOutput
       Fluent::NorikraOutput::Query.new(
         self.class.replace_target(target, @name_template),
         self.class.replace_target(target, @expression_template),
-        self.class.replace_target(target, @tag_template)
+        self.class.replace_target(target, @tag_template),
+        @fetch_interval
       )
     end
 
@@ -186,13 +188,17 @@ class Fluent::NorikraOutput
   end
 
   class Target
-    attr_accessor :target, :filter, :fields, :queries
+    attr_accessor :name, :fields, :queries
 
     def initialize(target, config)
-      @target = target
+      @name = target
       @filter = RecordFilter.new(*([:include, :include_regexp, :exclude, :exclude_regexp].map{|s| config.filter_params[s]}))
       @fields = config.field_definitions
       @queries = config.query_generators.map{|g| g.generate(target)}
+    end
+
+    def filter(record)
+      @filter.filter(record)
     end
 
     def reserve_fields

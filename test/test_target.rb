@@ -43,14 +43,14 @@ class TargetTest < Test::Unit::TestCase
 
     t = @this.new('test', s1 + s2)
 
-    assert_equal 'test', t.target
+    assert_equal 'test', t.name
     assert_equal({
         :string => %w(s1 s2 s3), :boolean => %w(bool1 bool2), :int => %w(i1 i2 i3 i4), :long => %w(num1 num2),
         :float => %w(f1 f2), :double => %w(d d1 d2 d3 d4)
       }, t.fields)
     assert_equal 3, t.queries.size
 
-    r = t.filter.filter({'x'=>1,'y'=>'y','z'=>'zett','flag'=>true,'f_x'=>'true','g_1'=>'g'})
+    r = t.filter({'x'=>1,'y'=>'y','z'=>'zett','flag'=>true,'f_x'=>'true','g_1'=>'g'})
     assert_equal 3, r.size
     assert_equal({'x'=>1,'y'=>'y','z'=>'zett'}, r)
 
