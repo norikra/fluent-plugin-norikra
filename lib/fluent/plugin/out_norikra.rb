@@ -120,6 +120,8 @@ module Fluent
     end
 
     def start
+      super
+
       @norikra_started = false
 
       if @execute_server
@@ -167,9 +169,7 @@ module Fluent
     def server_starter
       $log.info "starting Norikra server process #{@host}:#{@port}"
       @norikra_pid = fork do
-        require 'pp'
         ENV.keys.select{|k| k =~ /^(RUBY|GEM|BUNDLE|RBENV|RVM|rvm)/}.each {|k| ENV.delete(k)}
-        pp ENV
         exec [@execute_server_path, 'norikra(fluentd)'], 'start', '-H', @host, '-P', @port.to_s
       end
       connecting = true
@@ -180,16 +180,15 @@ module Fluent
           client(:connect_timeout => 1, :send_timeout => 1, :receive_timeout => 1).targets
           # discard result: no exceptions is success
           connecting = false
+          next
         rescue HTTPClient::TimeoutError
           $log.debug "Norikra server test connection timeout. retrying..."
-          sleep 1
         rescue Errno::ECONNREFUSED
           $log.debug "Norikra server test connection refused. retrying..."
-          sleep 1
         rescue => e
           $log.error "unknown error in confirming norikra server, #{e.class}:#{e.message}"
-          sleep 1
         end
+        sleep 3
       end
       $log.info "confirmed that norikra server #{@host}:#{@port} started."
       @norikra_started = true
@@ -205,7 +204,9 @@ module Fluent
         targets.each do |t|
           next if @target_map[t.name]
 
+          $log.debug "Preparing norikra target #{t.name} on #{@host}:#{@port}"
           if prepare_target(c, t)
+            $log.debug "success to prepare target #{t.name} on #{@host}:#{@port}"
             # success
             @mutex.synchronize do
               t.queries.each do |query|
@@ -249,8 +250,9 @@ module Fluent
         target = @target_generator.call(tag, record)
 
         t = @target_map[target]
-        unless tobe_registered_target_names.include?(target)
-          @register_queue.push(Target.new(@default_target + @config_targets[target]))
+        unless t || tobe_registered_target_names.include?(target)
+          t = Target.new(target, @default_target + @config_targets[target])
+          @register_queue.push(t)
           tobe_registered_target_names.push(target)
         end
 
@@ -263,32 +265,35 @@ module Fluent
     end
 
     def prepared?(target_names)
-      @started && target_names.reduce(true){|r,t| r && @target_map[t]}
+      @norikra_started && target_names.reduce(true){|r,t| r && @target_map[t]}
     end
 
     def write(chunk)
-      events = {} # target => [event]
+      events_map = {} # target => [event]
       chunk.msgpack_each do |target, event|
-        events[target] ||= []
-        events[target].push(event)
+        events_map[target] ||= []
+        events_map[target].push(event)
       end
 
-      unless prepared?(events.keys)
-        raise RuntimeError, "norikra server is not ready for this targets: #{events.keys.join(',')}"
+      unless prepared?(events_map.keys)
+        raise RuntimeError, "norikra server is not ready for this targets: #{events_map.keys.join(',')}"
       end
 
-      c = clinet()
+      c = client()
 
-      events.keys.each do |target|
+      events_map.each do |target, events|
         c.send(target, events)
       end
     end
 
-    def prepare_targets(client, target)
+    def prepare_target(client, target)
       # target open and reserve fields
+      $log.debug "Going to prepare about target"
       begin
         unless client.targets.include?(target.name)
+          $log.debug "opening target #{target.name}"
           client.open(target.name, target.reserve_fields)
+          $log.debug "opening target #{target.name}, done."
         end
 
         reserving = target.reserve_fields
@@ -306,7 +311,7 @@ module Fluent
           client.reserve(target, fieldname, type) unless reserved.include?(fieldname)
         end
       rescue => e
-        $log.warn "failed to prepare target:#{target.name}, server:#{@host}:#{@port}, with error:#{e.class.to_s}, message:#{e.message}"
+        $log.error "failed to prepare target:#{target.name}, server:#{@host}:#{@port}, with error:#{e.class.to_s}, message:#{e.message}"
         return false
       end
 
