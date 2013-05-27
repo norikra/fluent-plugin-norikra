@@ -208,13 +208,11 @@ module Fluent
           if prepare_target(c, t)
             $log.debug "success to prepare target #{t.name} on #{@host}:#{@port}"
             # success
-            @mutex.synchronize do
-              t.queries.each do |query|
-                @query_map[query.name] = query
-                insert_fetch_queue(FetchRequest.new(query)) unless query.tag.empty? || @event_method
-              end
-              @target_map[t.name] = t
+            t.queries.each do |query|
+              @query_map[query.name] = query
+              insert_fetch_queue(FetchRequest.new(query)) unless query.tag.empty? || @event_method
             end
+            @target_map[t.name] = t
           else
             $log.error "Failed to prepare norikra data for target:#{t.name}"
             @norikra_started.push(t)
@@ -311,7 +309,7 @@ module Fluent
           client.reserve(target, fieldname, type) unless reserved.include?(fieldname)
         end
       rescue => e
-        $log.error "failed to prepare target:#{target.name}, server:#{@host}:#{@port}, with error:#{e.class.to_s}, message:#{e.message}"
+        $log.error "failed to prepare target:#{target.name}", :norikra => "#{@host}:#{@port}", :error => e.class, :message => e.message
         return false
       end
 
@@ -328,7 +326,7 @@ module Fluent
           client.register(query.name, query.expression)
         end
       rescue => e
-        $log.warn "failed to register query, server:#{@host}:#{@port}, with error:#{e.class.to_s}, message:#{e.message}"
+        $log.warn "failed to register query", :norikra => "#{@host}:#{@port}", :error => e.class, :message => e.message
       end
     end
 
@@ -350,9 +348,15 @@ module Fluent
     def insert_fetch_queue(request)
       @mutex.synchronize do
         request.next!
-        next_pos = @fetch_queue.bsearch{|req| req.time > request.time}
-        @fetch_queue.insert(next_pos, request)
+        if @fetch_queue.size > 0
+          next_pos = @fetch_queue.bsearch{|req| req.time > request.time}
+          @fetch_queue.insert(next_pos, request)
+        else
+          @fetch_queue.push(request)
+        end
       end
+    rescue => e
+      $log.error "unknown log encountered", :error_class => e.class, :message => e.message
     end
 
     def sweep
@@ -365,7 +369,7 @@ module Fluent
           end
         end
       rescue => e
-        $log.error "failed to sweep from norikra #{@host}:#{@port}, error:#{e.class.to_s}, message:#{e.message}"
+        $log.error "failed to sweep", :norikra => "#{@host}:#{@port}", :error => e.class, :message => e.message
       end
     end
 
@@ -375,7 +379,7 @@ module Fluent
           Fluent::Engine.emit(query.tag, time, event)
         end
       rescue => e
-        $log.error "failed to fetch events for query:#{query.name}, from norikra #{@host}:#{@port}, error:#{e.class.to_s}, message:#{e.message}"
+        $log.error "failed to fetch for query:#{query.name}", :norikra => "#{@host}:#{@port}", :error => e.class, :message => e.message
       end
     end
   end
