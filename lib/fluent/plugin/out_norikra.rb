@@ -28,7 +28,7 @@ module Fluent
     def initialize
       super
       require_relative 'norikra_target'
-      require 'norikra-client'
+      require 'norikra/client'
     end
 
     def configure(conf)
@@ -71,7 +71,7 @@ module Fluent
           c = ConfigSection.new(element)
           @config_targets[c.target] = c
         when 'server'
-          @execute_server = Fluent::Config.bool_value(element['execute_server'])
+          @execute_server = Fluent::Config.bool_value(element['execute'])
           @execute_server_path = element['path']
         when 'event'
           event_section = element
@@ -165,18 +165,30 @@ module Fluent
     end
 
     def server_starter
+      $log.info "starting Norikra server process #{@host}:#{@port}"
       @norikra_pid = fork do
-        exec [@execute_server_path, 'norikra(fluentd)'], 'start'
+        require 'pp'
+        ENV.keys.select{|k| k =~ /^(RUBY|GEM|BUNDLE|RBENV|RVM|rvm)/}.each {|k| ENV.delete(k)}
+        pp ENV
+        exec [@execute_server_path, 'norikra(fluentd)'], 'start', '-H', @host, '-P', @port.to_s
       end
       connecting = true
+      $log.info "trying to confirm norikra server status..."
       while connecting
         begin
+          $log.debug "start to connect norikra server #{@host}:#{@port}"
           client(:connect_timeout => 1, :send_timeout => 1, :receive_timeout => 1).targets
           # discard result: no exceptions is success
           connecting = false
         rescue HTTPClient::TimeoutError
-          # retry...
-        #TODO: rescue connection refused
+          $log.debug "Norikra server test connection timeout. retrying..."
+          sleep 1
+        rescue Errno::ECONNREFUSED
+          $log.debug "Norikra server test connection refused. retrying..."
+          sleep 1
+        rescue => e
+          $log.error "unknown error in confirming norikra server, #{e.class}:#{e.message}"
+          sleep 1
         end
       end
       $log.info "confirmed that norikra server #{@host}:#{@port} started."
@@ -198,7 +210,7 @@ module Fluent
             @mutex.synchronize do
               t.queries.each do |query|
                 @query_map[query.name] = query
-                insert_fetch_queue(FetchRequest.new(query)) unless @event_method
+                insert_fetch_queue(FetchRequest.new(query)) unless query.tag.empty? || @event_method
               end
               @target_map[t.name] = t
             end
@@ -343,7 +355,7 @@ module Fluent
         client().sweep.each do |query_name, event_array|
           query = @query_map[query_name]
           event_array.each do |time,event|
-            tag = query ? query.tag : @event_tag_generator.call(query_name, event)
+            tag = (query && !query.tag.empty?) ? query.tag : @event_tag_generator.call(query_name, event)
             Fluent::Engine.emit(tag, time, event)
           end
         end

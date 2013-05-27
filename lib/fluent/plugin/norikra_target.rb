@@ -17,8 +17,8 @@ class Fluent::NorikraOutput
       @name_template = name_template || ''
       @expression_template = expression_template || ''
       @tag_template = tag_template || ''
-      if @name_template.empty? || @expression_template.empty? || @tag_template.empty?
-        raise Fluent::ConfigError, "query's name/expression/tag must be specified"
+      if @name_template.empty? || @expression_template.empty?
+        raise Fluent::ConfigError, "query's name/expression must be specified"
       end
       @fetch_interval = case
                         when opts['fetch_interval']
