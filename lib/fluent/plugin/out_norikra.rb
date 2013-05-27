@@ -1,16 +1,14 @@
 module Fluent
   class NorikraOutput < Fluent::BufferedOutput
-    # just namespace
-  end
-end
-
-module Fluent
-  class NorikraOutput < Fluent::BufferedOutput
     Fluent::Plugin.register_output('norikra', self)
 
     config_set_default :flush_interval, 1 # 1sec
 
     config_param :norikra, :string, :default => 'localhost:26571'
+
+    config_param :connect_timeout, :integer, :default => nil
+    config_param :send_timeout, :integer, :default => nil
+    config_param :receive_timeout, :integer, :default => nil
 
     #<server>
     attr_reader :execute_server, :execute_server_path
@@ -52,11 +50,18 @@ module Fluent
                           else
                             raise Fluent::ConfigError, "no one way specified to decide target"
                           end
+
+      # target map already prepared (opened, and related queries registered)
       @target_map = {} # 'target' => instance of Fluent::NorikraOutput::Target
-      @query_map = {} # 'query_name' => instance of Fluent::NorikraOutput::Query # for conversion from query_name to tag
+
+      # for conversion from query_name to tag
+      @query_map = {} # 'query_name' => instance of Fluent::NorikraOutput::Query
 
       @default_target = ConfigSection.new(Fluent::Config::Element.new('default', nil, {}, []))
       @config_targets = {}
+
+      @execute_server = false
+
       event_section = nil
       conf.elements.each do |element|
         case element.name
@@ -106,48 +111,150 @@ module Fluent
       @mutex = Mutex.new
     end
 
+    def client(opts={})
+      Norikra::Client.new(@host, @port, {
+          :connect_timeout => opts[:connect_timeout] || @connect_timeout,
+          :send_timeout    => opts[:send_timeout]    || @send_timeout,
+          :receive_timeout => opts[:receive_timeout] || @receive_timeout,
+        })
+    end
+
     def start
-      @started = false
-      @sending_targets = {}
-      @fetch_order = []
-      # start norikra server if needed
-      # create client instance and check connectivity (what way to wait server execution?)
-      # event fetcher thread
+      @norikra_started = false
+
+      if @execute_server
+        @norikra_pid = nil
+        @norikra_thread = Thread.new(&method(:server_starter))
+        # @norikra_started will be set in server_starter
+      else
+        @norikra_pid = nil
+        @norikra_thread = nil
+        @norikra_started = true
+      end
+
+      # register worker thread
+      @register_queue = []
+      @register_thread = Thread.new(&method(:register_worker))
+
+      # fetch worker thread
+      @fetch_queue = []
+      @fetch_thread = Thread.new(&method(:fetch_worker))
+
+      # for sweep
+      if @event_method
+        @fetch_queue.push(FetchRequest.new(nil, @event_sweep_interval))
+      end
     end
 
     def shutdown
-      # stop fetcher
-      # stop server if needed
+      @register_thread.kill
+      @fetch_thread.kill
+      Process.kill(:TERM, @norikra_pid) if @execute_server
+
+      @register_thread.join
+      @fetch_thread.join
+      begin
+        counter = 0
+        while !Process.waitpid(@norikra_pid, Process::WNOHANG)
+          sleep 1
+          break if counter > 3
+        end
+      rescue Errno::ECHILD
+        # norikra server process exited.
+      end
     end
 
     def server_starter
-      
+      @norikra_pid = fork do
+        exec [@execute_server_path, 'norikra(fluentd)'], 'start'
+      end
+      connecting = true
+      while connecting
+        begin
+          client(:connect_timeout => 1, :send_timeout => 1, :receive_timeout => 1).targets
+          # discard result: no exceptions is success
+          connecting = false
+        rescue HTTPClient::TimeoutError
+          # retry...
+        #TODO: rescue connection refused
+        end
+      end
+      $log.info "confirmed that norikra server #{@host}:#{@port} started."
+      @norikra_started = true
     end
 
     def register_worker
+      while sleep(0.25)
+        next unless @norikra_started
+
+        c = client()
+
+        targets = @register_queue.shift(10)
+        targets.each do |t|
+          next if @target_map[t.name]
+
+          if prepare_target(c, t)
+            # success
+            @mutex.synchronize do
+              t.queries.each do |query|
+                @query_map[query.name] = query
+                insert_fetch_queue(FetchRequest.new(query)) unless @event_method
+              end
+              @target_map[t.name] = t
+            end
+          else
+            $log.error "Failed to prepare norikra data for target:#{t.name}"
+            @norikra_started.push(t)
+          end
+        end
+      end
     end
 
     def fetch_worker
-    end
+      while sleep(1)
+        next unless @norikra_started
+        next if @fetch_queue.first.nil? || @fetch_queue.first.time > Time.now
 
-    def format(tag, time, record)
-      target = @target_generator.call(tag, record)
-      unless @target_map[target]
-        t = Target.new(@default_target + @config_targets[target])
-        #TODO: get lock and check target exists or not, and reserver fields, and register queries (and add @query_map)
-        @target_map[target] = t
+        now = Time.now
+        while @fetch_queue.first.time <= now
+          req = @fetch_queue.shift
+          if req.query.nil?
+            sweep()
+          else
+            fetch(req.query)
+          end
+          insert_fetch_queue(req)
+        end
       end
-      event = @target_map[target].convert(record)
-      [target,event].to_msgpack
     end
 
-    def prepared?(targets)
-      @started && targets.reduce(true){|r,t| r && @sending_targets[t]}
+    def format_stream(tag, es)
+      tobe_registered_target_names = []
+
+      out = ''
+
+      es.each do |time,record|
+        target = @target_generator.call(tag, record)
+
+        t = @target_map[target]
+        unless tobe_registered_target_names.include?(target)
+          @register_queue.push(Target.new(@default_target + @config_targets[target]))
+          tobe_registered_target_names.push(target)
+        end
+
+        event = t.filter(record)
+
+        out << [target,event].to_msgpack
+      end
+
+      out
+    end
+
+    def prepared?(target_names)
+      @started && target_names.reduce(true){|r,t| r && @target_map[t]}
     end
 
     def write(chunk)
-      @client = Norikra::Client.new(@host, @port)
-
       events = {} # target => [event]
       chunk.msgpack_each do |target, event|
         events[target] ||= []
@@ -158,8 +265,100 @@ module Fluent
         raise RuntimeError, "norikra server is not ready for this targets: #{events.keys.join(',')}"
       end
 
+      c = clinet()
+
       events.keys.each do |target|
-        @client.send(target, events)
+        c.send(target, events)
+      end
+    end
+
+    def prepare_targets(client, target)
+      # target open and reserve fields
+      begin
+        unless client.targets.include?(target.name)
+          client.open(target.name, target.reserve_fields)
+        end
+
+        reserving = target.reserve_fields
+        reserved = []
+        client.fields(target.name).each do |field|
+          if reserving[field['name']]
+            reserved.push(field['name'])
+            if reserving[field['name']] != field['type']
+              $log.warn "field type mismatch, reserving:#{reserving[field['name']]} but reserved:#{field['type']}"
+            end
+          end
+        end
+
+        reserving.each do |fieldname,type|
+          client.reserve(target, fieldname, type) unless reserved.include?(fieldname)
+        end
+      rescue => e
+        $log.warn "failed to prepare target:#{target.name}, server:#{@host}:#{@port}, with error:#{e.class.to_s}, message:#{e.message}"
+        return false
+      end
+
+      # query registration
+      begin
+        registered = Hash[client.queries.map{|q| [q['name'], q['expression']]}]
+        target.queries.each do |query|
+          if registered.has_key?(query.name) # query already registered
+            if registered[query.name] != query.expression
+              $log.warn "query name and expression mismatch, check norikra server status. target query name:#{query.name}"
+            end
+            next
+          end
+          client.register(query.name, query.expression)
+        end
+      rescue => e
+        $log.warn "failed to register query, server:#{@host}:#{@port}, with error:#{e.class.to_s}, message:#{e.message}"
+      end
+    end
+
+    class FetchRequest
+      attr_accessor :time, :query
+      def initialize(query, interval=nil)
+        @query = query
+        @interval = interval || query.interval
+        @time = Time.now + @interval
+      end
+      def <=>(other)
+        self.time <=> other.time
+      end
+      def next!
+        @time = Time.now + @interval
+      end
+    end
+
+    def insert_fetch_queue(request)
+      @mutex.synchronize do
+        request.next!
+        next_pos = @fetch_queue.bsearch{|req| req.time > request.time}
+        @fetch_queue.insert(next_pos, request)
+      end
+    end
+
+    def sweep
+      begin
+        client().sweep.each do |query_name, event_array|
+          query = @query_map[query_name]
+          event_array.each do |time,event|
+            tag = query ? query.tag : @event_tag_generator.call(query_name, event)
+            Fluent::Engine.emit(tag, time, event)
+          end
+        end
+      rescue => e
+        $log.error "failed to sweep from norikra #{@host}:#{@port}, error:#{e.class.to_s}, message:#{e.message}"
+      end
+    end
+
+    def fetch(query)
+      begin
+        client().event(query.name).each do |time,event| # [[time(int from epoch), event], ...]
+          Fluent::Engine.emit(query.tag, time, event)
+        end
+      rescue => e
+        $log.error "failed to fetch events for query:#{query.name}, from norikra #{@host}:#{@port}, error:#{e.class.to_s}, message:#{e.message}"
       end
     end
   end
