@@ -348,12 +348,14 @@ module Fluent
     def insert_fetch_queue(request)
       @mutex.synchronize do
         request.next!
-        if @fetch_queue.size > 0
-          next_pos = @fetch_queue.bsearch{|req| req.time > request.time}
-          @fetch_queue.insert(next_pos, request)
-        else
-          @fetch_queue.push(request)
-        end
+        # if @fetch_queue.size > 0
+        #   next_pos = @fetch_queue.bsearch{|req| req.time > request.time}
+        #   @fetch_queue.insert(next_pos, request)
+        # else
+        #   @fetch_queue.push(request)
+        # end
+        @fetch_queue.push(request)
+        @fetch_queue.sort!
       end
     rescue => e
       $log.error "unknown log encountered", :error_class => e.class, :message => e.message
