@@ -72,7 +72,9 @@ module Fluent
           @config_targets[c.target] = c
         when 'server'
           @execute_server = Fluent::Config.bool_value(element['execute'])
+          @execute_jruby_path = element['jruby']
           @execute_server_path = element['path']
+          @execute_server_opts = element['opts']
         when 'event'
           event_section = element
         else
@@ -168,9 +170,13 @@ module Fluent
 
     def server_starter
       $log.info "starting Norikra server process #{@host}:#{@port}"
+      options = [@execute_server_path, 'start', '-H', @host, '-P', @port.to_s]
+      if @execute_server_opts
+        options.unshift(*@execute_server_opts.split(/ +/).map{|opt| '-J' + opt})
+      end
       @norikra_pid = fork do
         ENV.keys.select{|k| k =~ /^(RUBY|GEM|BUNDLE|RBENV|RVM|rvm)/}.each {|k| ENV.delete(k)}
-        exec [@execute_server_path, 'norikra(fluentd)'], 'start', '-H', @host, '-P', @port.to_s
+        exec([@execute_jruby_path, 'norikra(fluentd)'], *options)
       end
       connecting = true
       $log.info "trying to confirm norikra server status..."
