@@ -19,8 +19,9 @@ At first, install JRuby and Norikra on your host if you are not using stand-alon
   * or other tools you want.
 2. swith to jruby, and install Norikra
   * `gem install norikra`
-3. check norikra path
-  * `which norikra`
+3. check and note `jruby` and `norikra-server`
+  * `which jruby`
+  * `which norikra-server`
 4. switch CRuby (with Fluentd), and install this plugin
   * `gem install fluent-plugin-norikra` (or use `fluent-gem`)
 5. configure Fluentd, and execute.
@@ -39,7 +40,9 @@ With built-in Norikra server, to receive tags like `event.foo` and send norikra'
       norikra localhost:26571 # this is default
       <server>
         execute yes
+		jruby   /home/user/.rbenv/versions/jruby-1.7.4/bin/jruby
         path    /home/user/.rbenv/versions/jruby-1.7.4/bin/norikra
+		opts    -Xmx2g
       </server>
       
       remove_tag_prefix event
@@ -68,7 +71,9 @@ If you know some field's types of records, you can define types of these fields.
       norikra localhost:26571 # this is default
       <server>
         execute yes
+		jruby   /home/user/.rbenv/versions/jruby-1.7.4/bin/jruby
         path    /home/user/.rbenv/versions/jruby-1.7.4/bin/norikra
+		opts    -Xmx2g
       </server>
       
       remove_tag_prefix event
