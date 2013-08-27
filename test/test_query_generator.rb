@@ -36,7 +36,7 @@ class QueryGeneratorTest < Test::Unit::TestCase
 
   def test_generate
     g = @this.new('query_${target}', 'SELECT * FROM ${target}.win:time_batch( 10 min ) WHERE x=1', 'tag.${target}')
-    q = g.generate('test')
+    q = g.generate('test', 'test')
     assert_equal 'query_test', q.name
     assert_equal 'SELECT * FROM test.win:time_batch( 10 min ) WHERE x=1', q.expression
     assert_equal 'tag.test', q.tag

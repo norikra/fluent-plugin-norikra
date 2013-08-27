@@ -31,17 +31,17 @@ class Fluent::NorikraOutput
                         end
     end
 
-    def generate(target)
+    def generate(name, escaped)
       Fluent::NorikraOutput::Query.new(
-        self.class.replace_target(target, @name_template),
-        self.class.replace_target(target, @expression_template),
-        self.class.replace_target(target, @tag_template),
+        self.class.replace_target(name, @name_template),
+        self.class.replace_target(escaped, @expression_template),
+        self.class.replace_target(name, @tag_template),
         @fetch_interval
       )
     end
 
-    def self.replace_target(target, str)
-      str.gsub('${target}', target)
+    def self.replace_target(t, str)
+      str.gsub('${target}', t)
     end
 
     def self.parse_time_period(string)
@@ -192,12 +192,32 @@ class Fluent::NorikraOutput
 
   class Target
     attr_accessor :name, :fields, :queries
+    attr_reader :escaped_name
+
+    def self.escape(src)
+      if src.nil? || src.empty?
+        return 'FluentdGenerated'
+      end
+
+      dst = src.gsub(/[^_a-zA-Z0-9]/, '_')
+      unless dst =~ /^[a-zA-Z]([_a-zA-Z0-9]*[a-zA-Z0-9])?$/
+        unless dst =~ /^[a-zA-Z]/
+          dst = 'Fluentd' + dst
+        end
+        unless dst =~ /[a-zA-Z0-9]$/
+          dst = dst + 'Generated'
+        end
+      end
+      dst
+    end
 
     def initialize(target, config)
       @name = target
+      @escaped_name = self.class.escape(@name)
+
       @filter = RecordFilter.new(*([:include, :include_regexp, :exclude, :exclude_regexp].map{|s| config.filter_params[s]}))
       @fields = config.field_definitions
-      @queries = config.query_generators.map{|g| g.generate(target)}
+      @queries = config.query_generators.map{|g| g.generate(@name, @escaped_name)}
     end
 
     def filter(record)

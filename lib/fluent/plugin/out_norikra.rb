@@ -268,7 +268,7 @@ module Fluent
 
         event = t.filter(record)
 
-        out << [target,event].to_msgpack
+        out << [t.escaped_name,event].to_msgpack
       end
 
       out
@@ -300,15 +300,15 @@ module Fluent
       # target open and reserve fields
       $log.debug "Going to prepare about target"
       begin
-        unless client.targets.include?(target.name)
-          $log.debug "opening target #{target.name}"
-          client.open(target.name, target.reserve_fields)
-          $log.debug "opening target #{target.name}, done."
+        unless client.targets.include?(target.escaped_name)
+          $log.debug "opening target #{target.escaped_name}"
+          client.open(target.escaped_name, target.reserve_fields)
+          $log.debug "opening target #{target.escaped_name}, done."
         end
 
         reserving = target.reserve_fields
         reserved = []
-        client.fields(target.name).each do |field|
+        client.fields(target.escaped_name).each do |field|
           if reserving[field['name']]
             reserved.push(field['name'])
             if reserving[field['name']] != field['type']
@@ -318,10 +318,10 @@ module Fluent
         end
 
         reserving.each do |fieldname,type|
-          client.reserve(target, fieldname, type) unless reserved.include?(fieldname)
+          client.reserve(target.escaped_name, fieldname, type) unless reserved.include?(fieldname)
         end
       rescue => e
-        $log.error "failed to prepare target:#{target.name}", :norikra => "#{@host}:#{@port}", :error => e.class, :message => e.message
+        $log.error "failed to prepare target:#{target.escaped_name}", :norikra => "#{@host}:#{@port}", :error => e.class, :message => e.message
         return false
       end
 
