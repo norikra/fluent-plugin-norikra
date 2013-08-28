@@ -157,14 +157,17 @@ module Fluent
 
       @register_thread.join
       @fetch_thread.join
-      begin
-        counter = 0
-        while !Process.waitpid(@norikra_pid, Process::WNOHANG)
-          sleep 1
-          break if counter > 3
+
+      if @execute_server
+        begin
+          counter = 0
+          while !Process.waitpid(@norikra_pid, Process::WNOHANG)
+            sleep 1
+            break if counter > 3
+          end
+        rescue Errno::ECHILD
+          # norikra server process exited.
         end
-      rescue Errno::ECHILD
-        # norikra server process exited.
       end
     end
 
@@ -275,7 +278,7 @@ module Fluent
     end
 
     def prepared?(target_names)
-      @norikra_started && target_names.reduce(true){|r,t| r && @target_map[t]}
+      @norikra_started && target_names.reduce(true){|r,t| r && @target_map.values.any?{|target| target.escaped_name == t}}
     end
 
     def write(chunk)
