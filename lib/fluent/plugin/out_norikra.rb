@@ -111,6 +111,7 @@ module Fluent
       end
 
       @mutex = Mutex.new
+      @target_mutex = Mutex.new
     end
 
     def client(opts={})
@@ -138,6 +139,7 @@ module Fluent
 
       # register worker thread
       @register_queue = []
+      @registered_targets = {}
       @register_thread = Thread.new(&method(:register_worker))
 
       # fetch worker thread
@@ -228,6 +230,7 @@ module Fluent
               insert_fetch_queue(FetchRequest.new(query)) unless query.tag.empty? || @event_method
             end
             @target_map[t.name] = t
+            @registered_targets.delete(t.name)
           else
             $log.error "Failed to prepare norikra data for target:#{t.name}"
             @norikra_started.push(t)
@@ -262,25 +265,32 @@ module Fluent
       es.each do |time,record|
         target = @target_generator.call(tag, record)
 
-        t = @target_map[target]
-        unless t || tobe_registered_target_names.include?(target)
-          conf = @config_targets[target]
-          unless conf
-            @config_targets.values.each do |c|
-              if c.target_matcher.match(target)
-                conf = c
-                break
+        tgt = @target_mutex.synchronize do
+          t = @target_map[target]
+          unless t
+            unless tobe_registered_target_names.include?(target)
+              conf = @config_targets[target]
+              unless conf
+                @config_targets.values.each do |c|
+                  if c.target_matcher.match(target)
+                    conf = c
+                    break
+                  end
+                end
               end
+              t = Target.new(target, @default_target + conf)
+              @registered_targets[target] = t
+              @register_queue.push(t)
+              tobe_registered_target_names.push(target)
             end
+            t = @registered_targets[target]
           end
-          t = Target.new(target, @default_target + conf)
-          @register_queue.push(t)
-          tobe_registered_target_names.push(target)
+          t
         end
 
-        event = t.filter(record)
+        event = tgt.filter(record)
 
-        out << [t.escaped_name,event].to_msgpack
+        out << [tgt.escaped_name,event].to_msgpack
       end
 
       out
