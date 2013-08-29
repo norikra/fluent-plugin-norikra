@@ -130,17 +130,20 @@ class Fluent::NorikraOutput
   end
 
   class ConfigSection
-    attr_accessor :target, :filter_params, :field_definitions, :query_generators
+    attr_accessor :target, :target_matcher, :filter_params, :field_definitions, :query_generators
 
     def initialize(section)
-      @target = case section.name
-                when 'default'
-                  nil
-                when 'target'
-                  section.arg
-                else
-                  raise ArgumentError, "invalid section for this class, #{section.name}: ConfigSection"
-                end
+      @target = nil
+      @target_matcher = nil
+      if section.name == 'default'
+        # nil
+      elsif section.name == 'target'
+        # unescaped target name (tag style with dots)
+        @target = section.arg
+        @target_matcher = Fluent::GlobMatchPattern.new(section.arg)
+      else
+        raise ArgumentError, "invalid section for this class, #{section.name}: ConfigSection"
+      end
       @filter_params = {
         :include => section['include'],
         :include_regexp => section['include_regexp'],

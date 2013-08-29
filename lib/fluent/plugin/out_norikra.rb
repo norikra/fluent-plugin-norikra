@@ -75,7 +75,7 @@ module Fluent
           @execute_jruby_path = element['jruby']
           @execute_server_path = element['path']
           @execute_server_opts = element['opts']
-        when 'event'
+        when 'event', 'events'
           event_section = element
         else
           raise Fluent::ConfigError, "unknown configuration section name for this plugin: #{element.name}"
@@ -264,7 +264,16 @@ module Fluent
 
         t = @target_map[target]
         unless t || tobe_registered_target_names.include?(target)
-          t = Target.new(target, @default_target + @config_targets[target])
+          conf = @config_targets[target]
+          unless conf
+            @config_targets.values.each do |c|
+              if c.target_matcher.match(target)
+                conf = c
+                break
+              end
+            end
+          end
+          t = Target.new(target, @default_target + conf)
           @register_queue.push(t)
           tobe_registered_target_names.push(target)
         end
