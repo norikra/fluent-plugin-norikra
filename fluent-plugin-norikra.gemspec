@@ -2,7 +2,7 @@
 
 Gem::Specification.new do |spec|
   spec.name          = "fluent-plugin-norikra"
-  spec.version       = "0.0.5"
+  spec.version       = "0.0.6"
   spec.authors       = ["TAGOMORI Satoshi"]
   spec.email         = ["tagomoris@gmail.com"]
   spec.description   = %q{process events on fluentd with SQL like query, with built-in Norikra server if needed.}
