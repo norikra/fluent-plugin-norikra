@@ -177,14 +177,13 @@ module Fluent
       $log.info "starting Norikra server process #{@host}:#{@port}"
       base_options = [@execute_server_path, 'start', '-H', @host, '-P', @port.to_s]
       cmd,options = if @execute_jruby_path
-                      args = [@execute_server_path, 'start', '-H', @host, '-P', @port.to_s]
-                      if @execute_server_opts
-                        args.unshift(*@execute_server_opts.split(/ +/).map{|opt| '-J' + opt})
-                      end
-                      [@execute_jruby_path, args]
+                      [@execute_jruby_path, [@execute_server_path, 'start', '-H', @host, '-P', @port.to_s]]
                     else
                       [@execute_server_path, ['start', '-H', @host, '-P', @port.to_s]]
                     end
+      if @execute_server_opts
+        options += @execute_server_opts.split(/ +/)
+      end
       @norikra_pid = fork do
         ENV.keys.select{|k| k =~ /^(RUBY|GEM|BUNDLE|RBENV|RVM|rvm)/}.each {|k| ENV.delete(k)}
         exec([cmd, 'norikra(fluentd)'], *options)
@@ -324,7 +323,7 @@ module Fluent
       begin
         unless client.targets.include?(target.escaped_name)
           $log.debug "opening target #{target.escaped_name}"
-          client.open(target.escaped_name, target.reserve_fields)
+          client.open(target.escaped_name, target.reserve_fields, target.auto_field)
           $log.debug "opening target #{target.escaped_name}, done."
         end
 

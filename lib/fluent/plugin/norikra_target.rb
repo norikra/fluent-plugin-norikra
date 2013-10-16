@@ -130,7 +130,7 @@ class Fluent::NorikraOutput
   end
 
   class ConfigSection
-    attr_accessor :target, :target_matcher, :filter_params, :field_definitions, :query_generators
+    attr_accessor :target, :target_matcher, :auto_field, :filter_params, :field_definitions, :query_generators
 
     def initialize(section)
       @target = nil
@@ -144,6 +144,9 @@ class Fluent::NorikraOutput
       else
         raise ArgumentError, "invalid section for this class, #{section.name}: ConfigSection"
       end
+
+      @auto_field = section['auto_field']
+
       @filter_params = {
         :include => section['include'],
         :include_regexp => section['include_regexp'],
@@ -175,6 +178,8 @@ class Fluent::NorikraOutput
         other = self.class.new(Fluent::Config::Element.new('target', 'dummy', {}, []))
       end
       r = self.class.new(Fluent::Config::Element.new('target', (other.target ? other.target : self.target), {}, []))
+      r.auto_field = (other.auto_field.nil? ? self.auto_field : other.auto_field)
+
       others_filter = {}
       other.filter_params.keys.each do |k|
         others_filter[k] = other.filter_params[k] if other.filter_params[k]
@@ -194,7 +199,7 @@ class Fluent::NorikraOutput
   end
 
   class Target
-    attr_accessor :name, :fields, :queries
+    attr_accessor :name, :auto_field, :fields, :queries
     attr_reader :escaped_name
 
     def self.escape(src)
@@ -217,6 +222,7 @@ class Fluent::NorikraOutput
     def initialize(target, config)
       @name = target
       @escaped_name = self.class.escape(@name)
+      @auto_field = config.auto_field.nil? ? true : config.auto_field
 
       @filter = RecordFilter.new(*([:include, :include_regexp, :exclude, :exclude_regexp].map{|s| config.filter_params[s]}))
       @fields = config.field_definitions

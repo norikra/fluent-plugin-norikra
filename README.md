@@ -92,7 +92,7 @@ If you know some field's types of records, you can define types of these fields.
       </default>
     </match>
 
-Additional field definitions and query registrations should be written in `<target TARGET_NAME>` sections.
+Additional field definitions and query registrations should be written in `<target TARGET_NAME>` sections. In each sections (or also in 'default'), you can specify `auto_field false` to suppress field number which increasing infinitely.
 
     <default>
       ... # for all of access logs
@@ -107,9 +107,12 @@ Additional field definitions and query registrations should be written in `<targ
 	  </query>
     </target>
     <target other_action>
+      auto_field false
 	  ...
     </target>
 	# ...
+
+Fields which are referred in queries are automatically registered on norikra server in spite of `auto_field false`.
 
 ### Input event data filtering
 
@@ -171,6 +174,8 @@ NOTE: 'sweep' get all events from Norikra, and other clients cannot get these ev
 * TODO: write this section
   * `fetch_interval`
   * error logs for new target, success logs of retry
+* input/output plugin
+  * output plugin with active-standby servers
 
 # TODO
 
