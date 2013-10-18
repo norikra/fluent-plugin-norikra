@@ -145,7 +145,7 @@ class Fluent::NorikraOutput
         raise ArgumentError, "invalid section for this class, #{section.name}: ConfigSection"
       end
 
-      @auto_field = section['auto_field']
+      @auto_field = Fluent::Config.bool_value(section['auto_field'])
 
       @filter_params = {
         :include => section['include'],
