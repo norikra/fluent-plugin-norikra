@@ -2,7 +2,7 @@
 
 Fluentd output plugin to send events to norikra server, and to fetch events (and re-send on fluentd network) from norikra server.
 
-With NorikraOutput, we can:
+With NorikraFilterOutput, we can:
 
  * execute Norikra server as built-in process dynamically
  * generate Norikra's target automatically with Fluentd's tags
@@ -31,12 +31,12 @@ At first, install JRuby and Norikra on your host if you are not using stand-alon
 
 For variations, see `example` directory.
 
-## NorikraOutput
+## NorikraFilterOutput
 
 With built-in Norikra server, to receive tags like `event.foo` and send norikra's target `foo`, and get count of its records per minute, and per hour.
 
     <match event.*>
-      type norikra
+      type norikra_filter
       norikra localhost:26571 # this is default
       <server>
         execute yes
@@ -67,7 +67,7 @@ With default setting, all fields are defined as 'string', so you must use `cast`
 If you know some field's types of records, you can define types of these fields. This plugin will define field types before it send records into Norikra server.
 
     <match event.*>
-      type norikra
+      type norikra_filter
       norikra localhost:26571 # this is default
       <server>
         execute yes

@@ -23,7 +23,7 @@ unless ENV.has_key?('VERBOSE')
   $log = nulllogger
 end
 
-require 'fluent/plugin/out_norikra'
+require 'fluent/plugin/out_norikra_filter'
 
 class Test::Unit::TestCase
 end

@@ -1,6 +1,6 @@
 module Fluent
-  class NorikraOutput < Fluent::BufferedOutput
-    Fluent::Plugin.register_output('norikra', self)
+  class NorikraFilterOutput < Fluent::BufferedOutput
+    Fluent::Plugin.register_output('norikra_filter', self)
 
     config_set_default :flush_interval, 1 # 1sec
 
@@ -28,7 +28,7 @@ module Fluent
     def initialize
       super
       require_relative 'norikra_target'
-      require 'norikra/client'
+      require 'norikra-client'
     end
 
     def configure(conf)
