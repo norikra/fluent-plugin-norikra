@@ -25,6 +25,25 @@ module Fluent
     # <events>
     attr_reader :event_method, :event_tag_generator, :event_sweep_interval
 
+    <<HOGE
+<fetch>
+  method event
+  target QUERY_NAME
+  interval 5s
+  tag    query_name
+  # tag    field FIELDNAME
+  # tag    string FIXED_STRING
+  tag_prefix norikra.event     # actual tag: norikra.event.QUERYNAME
+</fetch>
+<fetch>
+  method sweep
+  target QUERY_GROUP # or unspecified => default
+  interval 60s
+  tag field group_by_key
+  tag_prefix norikra.query
+</fetch>
+HOGE
+
     def initialize
       super
       require_relative 'norikra_target'
@@ -210,6 +229,39 @@ module Fluent
       @norikra_started = true
     end
 
+    # input-mixin
+    def fetch_worker
+      while sleep(1)
+        next unless @norikra_started #TODO: purge dependency
+        next if @fetch_queue.first.nil? || @fetch_queue.first.time > Time.now
+
+        now = Time.now
+        while @fetch_queue.first.time <= now
+          #TODO: shift, plan to fetch/emit in background, insert_queue
+
+          req = @fetch_queue.shift
+
+          begin
+            data = req.fetch(client()) #TODO: purge dependency
+          rescue => e
+            $log.error "failed to sweep", :norikra => "#{@host}:#{@port}", :error => e.class, :message => e.message
+          end
+
+          data.each do |tag, event_array|
+            event_array.each do |time,event|
+              begin
+                Fluent::Engine.emit(tag, time, event)
+              rescue => e
+                $log.error "failed to emit event from norikra query", :norikra => "#{@host}:#{@port}", :error => e.class, :message => e.message, :tag => tag, :record => event
+              end
+            end
+          end
+
+          insert_fetch_queue(req)
+        end
+      end
+    end
+
     def register_worker
       while sleep(0.25)
         next unless @norikra_started
@@ -226,6 +278,7 @@ module Fluent
             # success
             t.queries.each do |query|
               @query_map[query.name] = query
+              #TODO: fix
               insert_fetch_queue(FetchRequest.new(query)) unless query.tag.empty? || @event_method
             end
             @target_map[t.name] = t
@@ -234,24 +287,6 @@ module Fluent
             $log.error "Failed to prepare norikra data for target:#{t.name}"
             @norikra_started.push(t)
           end
-        end
-      end
-    end
-
-    def fetch_worker
-      while sleep(1)
-        next unless @norikra_started
-        next if @fetch_queue.first.nil? || @fetch_queue.first.time > Time.now
-
-        now = Time.now
-        while @fetch_queue.first.time <= now
-          req = @fetch_queue.shift
-          if req.query.nil?
-            sweep()
-          else
-            fetch(req.query)
-          end
-          insert_fetch_queue(req)
         end
       end
     end
@@ -363,24 +398,82 @@ module Fluent
       end
     end
 
+    # input-mixin
     class FetchRequest
-      attr_accessor :time, :query
-      def initialize(query, interval=nil)
-        @query = query
-        @interval = interval || query.interval
-        @time = Time.now + @interval
+      METHODS = [:event, :sweep]
+      TAG_TYPES = ['query_name', 'field', 'string']
+
+      attr_accessor :method, :target, :interval, :tag_generator, :tag_prefix
+      attr_accessor :time
+
+      def initialize(method, target, interval, tag_type, tag_arg, tag_prefix)
+        raise ArgumentError, "unknown method '#{method}'" unless METHODS.include?(method.to_sym)
+
+        @method = method.to_sym
+        @target = target
+        @interval = interval.to_i
+
+        raise ArgumentError, "unknown tag type specifier '#{tag_type}'" unless TAG_TYPES.include?(tag_type.to_s)
+        raw_tag_prefix = tag_prefix.to_s
+        if (! raw_tag_prefix.empty?) && (! raw_tag_prefix.end_with?('.')) # tag_prefix specified, and ends without dot
+          raw_tag_prefix += '.'
+        end
+
+        @tag_generator = case tag_type.to_s
+                         when 'query_name' then lambda{|query_name,record| raw_tag_prefix + query_name}
+                         when 'field'      then lambda{|query_name,record| raw_tag_prefix + record[tag_arg]}
+                         when 'string'     then lambda{|query_name,record| raw_tag_prefix + tag_arg}
+                         else
+                           raise "bug"
+                         end
+        @time = Time.now + 1 # should be fetched soon ( 1sec later )
       end
+
       def <=>(other)
         self.time <=> other.time
       end
+
       def next!
         @time = Time.now + @interval
       end
+
+      # returns hash: { tag => [[time, record], ...], ... }
+      def fetch(client)
+        # events { query_name => [[time, record], ...], ... }
+        events = case @method
+                 when :event then event(client)
+                 when :sweep then sweep(client)
+                 else
+                   raise "BUG: unknown method: #{@method}"
+                 end
+
+        output = {}
+
+        events.keys.each do |query_name|
+          events[query_name].each do |time, record|
+            tag = @tag_generator.call(query_name, record)
+            output[tag] ||= []
+            output[tag] << [time, record]
+          end
+        end
+
+        output
+      end
+
+      def event(client)
+        events = client.event(@target) # [[time(int from epoch), event], ...]
+        {@target => events}
+      end
+
+      def sweep(client)
+        client.sweep(@target) # {query_name => event_array, ...}
+      end
     end
 
+    # input-mixin
     def insert_fetch_queue(request)
       @mutex.synchronize do
-        request.next!
+        request.next! if request.time < Time.now
         # if @fetch_queue.size > 0
         #   next_pos = @fetch_queue.bsearch{|req| req.time > request.time}
         #   @fetch_queue.insert(next_pos, request)
@@ -392,30 +485,6 @@ module Fluent
       end
     rescue => e
       $log.error "unknown log encountered", :error_class => e.class, :message => e.message
-    end
-
-    def sweep
-      begin
-        client().sweep.each do |query_name, event_array|
-          query = @query_map[query_name]
-          event_array.each do |time,event|
-            tag = (query && !query.tag.empty?) ? query.tag : @event_tag_generator.call(query_name, event)
-            Fluent::Engine.emit(tag, time, event)
-          end
-        end
-      rescue => e
-        $log.error "failed to sweep", :norikra => "#{@host}:#{@port}", :error => e.class, :message => e.message
-      end
-    end
-
-    def fetch(query)
-      begin
-        client().event(query.name).each do |time,event| # [[time(int from epoch), event], ...]
-          Fluent::Engine.emit(query.tag, time, event)
-        end
-      rescue => e
-        $log.error "failed to fetch for query:#{query.name}", :norikra => "#{@host}:#{@port}", :error => e.class, :message => e.message
-      end
     end
   end
 end
