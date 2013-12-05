@@ -1,9 +1,9 @@
 require 'helper'
-require 'fluent/plugin/norikra_target'
+require 'fluent/plugin/norikra/config_section'
 
 class ConfigSectionTest < Test::Unit::TestCase
   def setup
-    @this = Fluent::NorikraOutput::ConfigSection
+    @this = Fluent::NorikraPlugin::ConfigSection
   end
 
   def test_init_default

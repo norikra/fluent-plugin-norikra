@@ -1,9 +1,9 @@
 require 'helper'
-require 'fluent/plugin/norikra_target'
+require 'fluent/plugin/norikra/query_generator'
 
 class QueryGeneratorTest < Test::Unit::TestCase
   def setup
-    @this = Fluent::NorikraOutput::QueryGenerator
+    @this = Fluent::NorikraPlugin::QueryGenerator
   end
 
   def test_replace_target

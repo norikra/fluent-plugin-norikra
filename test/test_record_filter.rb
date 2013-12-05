@@ -1,9 +1,9 @@
 require 'helper'
-require 'fluent/plugin/norikra_target'
+require 'fluent/plugin/norikra/record_filter'
 
 class RecordFilterTest < Test::Unit::TestCase
   def setup
-    @this = Fluent::NorikraOutput::RecordFilter
+    @this = Fluent::NorikraPlugin::RecordFilter
   end
 
   def test_errors
