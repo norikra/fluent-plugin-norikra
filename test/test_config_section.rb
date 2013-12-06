@@ -1,9 +1,9 @@
 require 'helper'
-require 'fluent/plugin/norikra_target'
+require 'fluent/plugin/norikra/config_section'
 
 class ConfigSectionTest < Test::Unit::TestCase
   def setup
-    @this = Fluent::NorikraOutput::ConfigSection
+    @this = Fluent::NorikraPlugin::ConfigSection
   end
 
   def test_init_default
@@ -38,6 +38,32 @@ class ConfigSectionTest < Test::Unit::TestCase
       }, s1.field_definitions)
     assert_equal 2, s1.query_generators.size
     assert_equal (10 * 60 / 5), s1.query_generators.map(&:fetch_interval).sort.first
+  end
+
+  def test_init_default_without_query
+    q1 = Fluent::Config::Element.new('query', nil, {
+        'name' => 'q1_${target}',
+        'expression' => 'SELECT * FROM ${target}.win:time_batch(10 min) WHERE q1',
+        'tag' => 'q1.${target}'
+      }, [])
+    q2 = Fluent::Config::Element.new('query', nil, {
+        'name' => 'q2_${target}',
+        'expression' => 'SELECT * FROM ${target}.win:time_batch(50 min) WHERE q2.length() > 0',
+        'tag' => 'q2.${target}'
+      }, [])
+    c1 = Fluent::Config::Element.new('default', nil, {
+        'include' => '*',
+        'exclude' => 'flag',
+        'exclude_regexp' => 'f_.*',
+        'field_string' => 's1,s2,s3',
+        'field_boolean' => 'bool1,bool2',
+        'field_int' => 'i1,i2,i3,i4',
+        'field_long' => 'num1,num2',
+        'field_float' => 'f1,f2',
+        'field_double' => 'd'
+      }, [q1,q2])
+    s1 = @this.new(c1, false)
+    assert_equal 0, s1.query_generators.size
   end
 
   def test_init_target
@@ -175,5 +201,44 @@ class ConfigSectionTest < Test::Unit::TestCase
     assert_equal s1.field_definitions, s.field_definitions
     assert_equal s1.query_generators.size, s.query_generators.size
     assert_equal s1.query_generators.map(&:fetch_interval).sort.first, s.query_generators.map(&:fetch_interval).sort.first
+  end
+
+  def test_join_without_query
+    q1 = Fluent::Config::Element.new('query', nil, {
+        'name' => 'q1_${target}',
+        'expression' => 'SELECT * FROM ${target}.win:time_batch(10 min) WHERE q1',
+        'tag' => 'q1.${target}'
+      }, [])
+    q2 = Fluent::Config::Element.new('query', nil, {
+        'name' => 'q2_${target}',
+        'expression' => 'SELECT * FROM ${target}.win:time_batch(50 min) WHERE q2.length() > 0',
+        'tag' => 'q2.${target}'
+      }, [])
+    c1 = Fluent::Config::Element.new('default', nil, {
+        'include' => '*',
+        'exclude' => 'flag',
+        'exclude_regexp' => 'f_.*',
+        'field_string' => 's1,s2,s3',
+        'field_boolean' => 'bool1,bool2',
+        'field_int' => 'i1,i2,i3,i4',
+        'field_long' => 'num1,num2',
+        'field_float' => 'f1,f2',
+        'field_double' => 'd'
+      }, [q1,q2])
+    s1 = @this.new(c1, false)
+
+    q3 = Fluent::Config::Element.new('query', nil, {
+        'name' => 'q3_test',
+        'expression' => 'SELECT * FROM ${target}.win:time_batch(30 min) WHERE q3="/"',
+        'tag' => 'q3.test'
+      }, [])
+    c2 = Fluent::Config::Element.new('target', 'test', {
+        'exclude_regexp' => '(f|g)_.*',
+        'field_double' => 'd1,d2,d3,d4'
+      }, [q3])
+    s2 = @this.new(c2, false)
+
+    s = s1 + s2
+    assert_equal 0, s.query_generators.size
   end
 end

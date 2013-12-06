@@ -1,9 +1,9 @@
 require 'helper'
-require 'fluent/plugin/norikra_target'
+require 'fluent/plugin/norikra/target'
 
 class TargetTest < Test::Unit::TestCase
   def setup
-    @this = Fluent::NorikraOutput::Target
+    @this = Fluent::NorikraPlugin::Target
   end
 
   def test_target_name_escape
@@ -39,7 +39,7 @@ class TargetTest < Test::Unit::TestCase
       'field_float' => 'f1,f2',
       'field_double' => 'd'
     }, [Q1,Q2])
-  S1 = Fluent::NorikraOutput::ConfigSection.new(C1)
+  S1 = Fluent::NorikraPlugin::ConfigSection.new(C1)
 
   Q3 = Fluent::Config::Element.new('query', nil, {
       'name' => 'q3_test',
@@ -50,7 +50,7 @@ class TargetTest < Test::Unit::TestCase
       'exclude_regexp' => '(f|g)_.*',
       'field_double' => 'd1,d2,d3,d4'
     }, [Q3])
-  S2 = Fluent::NorikraOutput::ConfigSection.new(C2)
+  S2 = Fluent::NorikraPlugin::ConfigSection.new(C2)
 
   def test_instanciate
     t = @this.new('test', S1 + S2)
