@@ -35,15 +35,20 @@ class QueryGeneratorTest < Test::Unit::TestCase
   end
 
   def test_generate
-    g = @this.new('query_${target}', 'SELECT * FROM ${target}.win:time_batch( 10 min ) WHERE x=1', 'tag.${target}')
+    g = @this.new('query_${target}', 'test_group', 'SELECT * FROM ${target}.win:time_batch( 10 min ) WHERE x=1', 'tag.${target}')
     q = g.generate('test', 'test')
     assert_equal 'query_test', q.name
+    assert_equal 'test_group', q.group
     assert_equal 'SELECT * FROM test.win:time_batch( 10 min ) WHERE x=1', q.expression
     assert_equal 'tag.test', q.tag
+
+    g = @this.new('query_${target}', nil, 'SELECT * FROM ${target}.win:time_batch( 10 min ) WHERE x=1', 'tag.${target}')
+    q = g.generate('test', 'test')
+    assert_nil q.group
   end
 
   def test_fetch_interval
-    g = @this.new('query_${target}', 'SELECT * FROM ${target}.win:time_batch( 12 min ) WHERE x=1', 'tag.${target}')
+    g = @this.new('query_${target}', nil, 'SELECT * FROM ${target}.win:time_batch( 12 min ) WHERE x=1', 'tag.${target}')
     assert_equal (12*60/5), g.fetch_interval
   end
 end

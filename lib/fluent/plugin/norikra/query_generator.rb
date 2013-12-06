@@ -2,8 +2,9 @@ module Fluent::NorikraPlugin
   class QueryGenerator
     attr_reader :fetch_interval
 
-    def initialize(name_template, expression_template, tag_template, opts={})
+    def initialize(name_template, group, expression_template, tag_template, opts={})
       @name_template = name_template || ''
+      @group = group
       @expression_template = expression_template || ''
       @tag_template = tag_template || ''
       if @name_template.empty? || @expression_template.empty?
@@ -23,6 +24,7 @@ module Fluent::NorikraPlugin
     def generate(name, escaped)
       Fluent::NorikraPlugin::Query.new(
         self.class.replace_target(name, @name_template),
+        @group,
         self.class.replace_target(escaped, @expression_template),
         self.class.replace_target(name, @tag_template),
         @fetch_interval

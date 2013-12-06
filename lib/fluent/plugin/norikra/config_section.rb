@@ -26,10 +26,8 @@ module Fluent::NorikraPlugin
       @field_definitions = {
         :string => (section['field_string'] || '').split(','),
         :boolean => (section['field_boolean'] || '').split(','),
-        :int => (section['field_int'] || '').split(','),
-        :long => (section['field_long'] || '').split(','),
+        :integer => (section['field_integer'] || '').split(','),
         :float => (section['field_float'] || '').split(','),
-        :double => (section['field_double'] || '').split(',')
       }
 
       @query_generators = []
@@ -37,9 +35,9 @@ module Fluent::NorikraPlugin
         if element.name == 'query' && enable_auto_query
           opt = {}
           if element.has_key?('fetch_interval')
-            opt['fetch_interval'] = element['fetch_interval'].to_i
+            opt['fetch_interval'] = Fluent::Config.time_value(element['fetch_interval'])
           end
-          @query_generators.push(QueryGenerator.new(element['name'], element['expression'], element['tag'], opt))
+          @query_generators.push(QueryGenerator.new(element['name'], element['group'], element['expression'], element['tag'], opt))
         end
       end
     end
@@ -59,10 +57,8 @@ module Fluent::NorikraPlugin
       r.field_definitions = {
         :string => self.field_definitions[:string] + other.field_definitions[:string],
         :boolean => self.field_definitions[:boolean] + other.field_definitions[:boolean],
-        :int => self.field_definitions[:int] + other.field_definitions[:int],
-        :long => self.field_definitions[:long] + other.field_definitions[:long],
+        :integer => self.field_definitions[:integer] + other.field_definitions[:integer],
         :float => self.field_definitions[:float] + other.field_definitions[:float],
-        :double => self.field_definitions[:double] + other.field_definitions[:double]
       }
       r.query_generators = self.query_generators + other.query_generators
       r

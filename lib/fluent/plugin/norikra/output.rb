@@ -28,7 +28,7 @@ module Fluent::NorikraPlugin
       # for conversion from query_name to tag
       @query_map = {} # 'query_name' => instance of Fluent::NorikraPlugin::Query
 
-      @default_target = ConfigSection.new(Fluent::Config::Element.new('default', nil, {}, []))
+      @default_target = ConfigSection.new(Fluent::Config::Element.new('default', nil, {}, []), @enable_auto_query)
       @config_targets = {}
 
       conf.elements.each do |element|
@@ -64,6 +64,12 @@ module Fluent::NorikraPlugin
       fetchable? && target_names.reduce(true){|r,t| r && @target_map.values.any?{|target| target.escaped_name == t}}
     end
 
+    def fetch_event_registration(query)
+      return if query.tag.nil? || query.tag.empty?
+      req = FetchRequest.new(:event, query.name, query.interval, 'string', query.tag, nil)
+      insert_fetch_queue(req)
+    end
+
     def register_worker
       while sleep(0.25)
         break unless @register_worker_running
@@ -84,10 +90,7 @@ module Fluent::NorikraPlugin
 
               t.queries.each do |query|
                 @query_map[query.name] = query
-                unless query.tag.empty?
-                  req = FetchRequest.new(:event, query.name, query.interval, 'string', query.tag, nil)
-                  insert_fetch_queue(req)
-                end
+                fetch_event_registration(query)
               end
             end
             @target_map[t.name] = t
@@ -139,7 +142,10 @@ module Fluent::NorikraPlugin
             end
             next
           end
-          client.register(query.name, query.expression)
+          client.register(query.name, query.group, query.expression)
+
+          @query_map[query.name] = query
+          fetch_event_registration(query)
         end
       rescue => e
         $log.warn "failed to register query", :norikra => "#{@host}:#{@port}", :error => e.class, :message => e.message

@@ -28,8 +28,11 @@ module Fluent::NorikraPlugin
         target = e['target']
         interval_str = e['interval']
         tag = e['tag']
-        unless method && target && interval_str && tag
-          raise ArgumentError, "<fetch> must be specified with method/target/interval/tag"
+        unless method && interval_str && tag
+          raise Fluent::ConfigError, "<fetch> must be specified with method/interval/tag"
+        end
+        if method == 'event' and target.nil?
+          raise Fluent::ConfigError, "<fetch> method 'event' requires 'target' for fetch target query name"
         end
 
         interval = Fluent::Config.time_value(interval_str)
@@ -85,7 +88,7 @@ module Fluent::NorikraPlugin
           begin
             data = req.fetch(client())
           rescue => e
-            $log.error "failed to sweep", :norikra => "#{@host}:#{@port}", :error => e.class, :message => e.message
+            $log.error "failed to fetch", :norikra => "#{@host}:#{@port}", :method => req.method, :target => req.target, :error => e.class, :message => e.message
           end
 
           data.each do |tag, event_array|
