@@ -34,10 +34,8 @@ class TargetTest < Test::Unit::TestCase
       'exclude_regexp' => 'f_.*',
       'field_string' => 's1,s2,s3',
       'field_boolean' => 'bool1,bool2',
-      'field_int' => 'i1,i2,i3,i4',
-      'field_long' => 'num1,num2',
-      'field_float' => 'f1,f2',
-      'field_double' => 'd'
+      'field_integer' => 'i1,i2,i3,i4,num1,num2',
+      'field_float' => 'f1,f2,d',
     }, [Q1,Q2])
   S1 = Fluent::NorikraPlugin::ConfigSection.new(C1)
 
@@ -48,7 +46,7 @@ class TargetTest < Test::Unit::TestCase
     }, [])
   C2 = Fluent::Config::Element.new('target', 'test', {
       'exclude_regexp' => '(f|g)_.*',
-      'field_double' => 'd1,d2,d3,d4'
+      'field_float' => 'd1,d2,d3,d4'
     }, [Q3])
   S2 = Fluent::NorikraPlugin::ConfigSection.new(C2)
 
@@ -57,8 +55,8 @@ class TargetTest < Test::Unit::TestCase
 
     assert_equal 'test', t.name
     assert_equal({
-        :string => %w(s1 s2 s3), :boolean => %w(bool1 bool2), :int => %w(i1 i2 i3 i4), :long => %w(num1 num2),
-        :float => %w(f1 f2), :double => %w(d d1 d2 d3 d4)
+        :string => %w(s1 s2 s3), :boolean => %w(bool1 bool2), :integer => %w(i1 i2 i3 i4 num1 num2),
+        :float => %w(f1 f2 d d1 d2 d3 d4)
       }, t.fields)
     assert_equal 3, t.queries.size
 
@@ -70,9 +68,9 @@ class TargetTest < Test::Unit::TestCase
     assert_equal({
         's1' => 'string', 's2' => 'string', 's3' => 'string',
         'bool1' => 'boolean', 'bool2' => 'boolean',
-        'i1' => 'int', 'i2' => 'int', 'i3' => 'int', 'i4' => 'int', 'num1' => 'long', 'num2' => 'long',
+        'i1' => 'integer', 'i2' => 'integer', 'i3' => 'integer', 'i4' => 'integer', 'num1' => 'integer', 'num2' => 'integer',
         'f1' => 'float', 'f2' => 'float',
-        'd' => 'double', 'd1' => 'double', 'd2' => 'double', 'd3' => 'double', 'd4' => 'double'
+        'd' => 'float', 'd1' => 'float', 'd2' => 'float', 'd3' => 'float', 'd4' => 'float'
       }, t.reserve_fields)
   end
 

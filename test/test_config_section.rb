@@ -23,18 +23,16 @@ class ConfigSectionTest < Test::Unit::TestCase
         'exclude_regexp' => 'f_.*',
         'field_string' => 's1,s2,s3',
         'field_boolean' => 'bool1,bool2',
-        'field_int' => 'i1,i2,i3,i4',
-        'field_long' => 'num1,num2',
-        'field_float' => 'f1,f2',
-        'field_double' => 'd'
+        'field_integer' => 'i1,i2,i3,i4,num1,num2',
+        'field_float' => 'f1,f2,d',
       }, [q1,q2])
     s1 = @this.new(c1)
 
     assert_nil s1.target
     assert_equal({:include => '*', :include_regexp => nil, :exclude => 'flag', :exclude_regexp => 'f_.*'}, s1.filter_params)
     assert_equal({
-        :string => %w(s1 s2 s3), :boolean => %w(bool1 bool2), :int => %w(i1 i2 i3 i4), :long => %w(num1 num2),
-        :float => %w(f1 f2), :double => %w(d)
+        :string => %w(s1 s2 s3), :boolean => %w(bool1 bool2), :integer => %w(i1 i2 i3 i4 num1 num2),
+        :float => %w(f1 f2 d),
       }, s1.field_definitions)
     assert_equal 2, s1.query_generators.size
     assert_equal (10 * 60 / 5), s1.query_generators.map(&:fetch_interval).sort.first
@@ -57,10 +55,8 @@ class ConfigSectionTest < Test::Unit::TestCase
         'exclude_regexp' => 'f_.*',
         'field_string' => 's1,s2,s3',
         'field_boolean' => 'bool1,bool2',
-        'field_int' => 'i1,i2,i3,i4',
-        'field_long' => 'num1,num2',
-        'field_float' => 'f1,f2',
-        'field_double' => 'd'
+        'field_integer' => 'i1,i2,i3,i4,num1,num2',
+        'field_float' => 'f1,f2,d',
       }, [q1,q2])
     s1 = @this.new(c1, false)
     assert_equal 0, s1.query_generators.size
@@ -74,13 +70,13 @@ class ConfigSectionTest < Test::Unit::TestCase
       }, [])
     c2 = Fluent::Config::Element.new('target', 'test2', {
         'exclude_regexp' => '(f|g)_.*',
-        'field_double' => 'd1,d2,d3,d4'
+        'field_float' => 'd1,d2,d3,d4'
       }, [q3])
     s2 = @this.new(c2)
 
     assert_equal 'test2', s2.target
     assert_equal({:include => nil, :include_regexp => nil, :exclude => nil, :exclude_regexp => '(f|g)_.*'}, s2.filter_params)
-    assert_equal({:string => [], :boolean => [], :int => [], :long => [], :float => [], :double => %w(d1 d2 d3 d4)}, s2.field_definitions)
+    assert_equal({:string => [], :boolean => [], :integer => [], :float => %w(d1 d2 d3 d4)}, s2.field_definitions)
     assert_equal 1, s2.query_generators.size
     assert_equal (30 * 60 / 5), s2.query_generators.map(&:fetch_interval).sort.first
   end
@@ -97,19 +93,19 @@ class ConfigSectionTest < Test::Unit::TestCase
 
     assert_equal 'test3', s3.target
     assert_equal({:include => nil, :include_regexp => nil, :exclude => nil, :exclude_regexp => nil}, s3.filter_params)
-    assert_equal({:string => [], :boolean => [], :int => [], :long => [], :float => [], :double => []}, s3.field_definitions)
+    assert_equal({:string => [], :boolean => [], :integer => [], :float => []}, s3.field_definitions)
     assert_equal 1, s3.query_generators.size
   end
 
   def test_init_target_without_query
     c4 = Fluent::Config::Element.new('target', 'test4', {
-        'field_int' => 'status'
+        'field_integer' => 'status'
       }, [])
     s4 = @this.new(c4)
 
     assert_equal 'test4', s4.target
     assert_equal({:include => nil, :include_regexp => nil, :exclude => nil, :exclude_regexp => nil}, s4.filter_params)
-    assert_equal({:string => [], :boolean => [], :int => ['status'], :long => [], :float => [], :double => []}, s4.field_definitions)
+    assert_equal({:string => [], :boolean => [], :integer => ['status'], :float => []}, s4.field_definitions)
     assert_equal 0, s4.query_generators.size
   end
 
@@ -119,7 +115,7 @@ class ConfigSectionTest < Test::Unit::TestCase
 
     assert_equal 'test5', s5.target
     assert_equal({:include => nil, :include_regexp => nil, :exclude => nil, :exclude_regexp => nil}, s5.filter_params)
-    assert_equal({:string => [], :boolean => [], :int => [], :long => [], :float => [], :double => []}, s5.field_definitions)
+    assert_equal({:string => [], :boolean => [], :integer => [], :float => []}, s5.field_definitions)
     assert_equal 0, s5.query_generators.size
   end
 
@@ -140,10 +136,8 @@ class ConfigSectionTest < Test::Unit::TestCase
         'exclude_regexp' => 'f_.*',
         'field_string' => 's1,s2,s3',
         'field_boolean' => 'bool1,bool2',
-        'field_int' => 'i1,i2,i3,i4',
-        'field_long' => 'num1,num2',
-        'field_float' => 'f1,f2',
-        'field_double' => 'd'
+        'field_integer' => 'i1,i2,i3,i4,num1,num2',
+        'field_float' => 'f1,f2,d',
       }, [q1,q2])
     s1 = @this.new(c1)
 
@@ -154,7 +148,7 @@ class ConfigSectionTest < Test::Unit::TestCase
       }, [])
     c2 = Fluent::Config::Element.new('target', 'test', {
         'exclude_regexp' => '(f|g)_.*',
-        'field_double' => 'd1,d2,d3,d4'
+        'field_float' => 'd1,d2,d3,d4'
       }, [q3])
     s2 = @this.new(c2)
 
@@ -163,8 +157,8 @@ class ConfigSectionTest < Test::Unit::TestCase
     assert_equal 'test', s.target
     assert_equal({:include => '*', :include_regexp => nil, :exclude => 'flag', :exclude_regexp => '(f|g)_.*'}, s.filter_params)
     assert_equal({
-        :string => %w(s1 s2 s3), :boolean => %w(bool1 bool2), :int => %w(i1 i2 i3 i4), :long => %w(num1 num2),
-        :float => %w(f1 f2), :double => %w(d d1 d2 d3 d4)
+        :string => %w(s1 s2 s3), :boolean => %w(bool1 bool2), :integer => %w(i1 i2 i3 i4 num1 num2),
+        :float => %w(f1 f2 d d1 d2 d3 d4)
       }, s.field_definitions)
     assert_equal 3, s.query_generators.size
     assert_equal (10 * 60 / 5), s.query_generators.map(&:fetch_interval).sort.first
@@ -187,10 +181,8 @@ class ConfigSectionTest < Test::Unit::TestCase
         'exclude_regexp' => 'f_.*',
         'field_string' => 's1,s2,s3',
         'field_boolean' => 'bool1,bool2',
-        'field_int' => 'i1,i2,i3,i4',
-        'field_long' => 'num1,num2',
-        'field_float' => 'f1,f2',
-        'field_double' => 'd'
+        'field_integer' => 'i1,i2,i3,i4,num1,num2',
+        'field_float' => 'f1,f2,d',
       }, [q1,q2])
     s1 = @this.new(c1)
 
@@ -220,10 +212,8 @@ class ConfigSectionTest < Test::Unit::TestCase
         'exclude_regexp' => 'f_.*',
         'field_string' => 's1,s2,s3',
         'field_boolean' => 'bool1,bool2',
-        'field_int' => 'i1,i2,i3,i4',
-        'field_long' => 'num1,num2',
-        'field_float' => 'f1,f2',
-        'field_double' => 'd'
+        'field_integer' => 'i1,i2,i3,i4,num1,num2',
+        'field_float' => 'f1,f2,d',
       }, [q1,q2])
     s1 = @this.new(c1, false)
 
@@ -234,7 +224,7 @@ class ConfigSectionTest < Test::Unit::TestCase
       }, [])
     c2 = Fluent::Config::Element.new('target', 'test', {
         'exclude_regexp' => '(f|g)_.*',
-        'field_double' => 'd1,d2,d3,d4'
+        'field_float' => 'd1,d2,d3,d4'
       }, [q3])
     s2 = @this.new(c2, false)
 
