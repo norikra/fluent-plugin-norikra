@@ -91,4 +91,45 @@ class TargetTest < Test::Unit::TestCase
     assert_equal 'SELECT * FROM test_service.win:time_batch(30 min) WHERE q3="/"', t.queries[2].expression
     assert_equal 'q3.test', t.queries[2].tag
   end
+
+  C3 = Fluent::Config::Element.new('target', 'test', {
+      'escape_fieldname' => 'no',
+    }, [])
+  S3 = Fluent::NorikraPlugin::ConfigSection.new(C3)
+  C4 = Fluent::Config::Element.new('target', 'test', {
+      'escape_fieldname' => 'yes',
+    }, [])
+  S4 = Fluent::NorikraPlugin::ConfigSection.new(C4)
+
+  def test_escape_fieldname
+    t = @this.new('test.service', S3)
+    r = t.filter({'a 1' => '1', 'b 2' => 2, 'c-1' => { 'd/1' => '1', 'd 2' => '2' }, 'f' => [1, 2, {'g+1' => 3}] })
+    assert_equal '1', r['a 1']
+    assert_equal 2,   r['b 2']
+    assert_equal '1', r['c-1']['d/1']
+    assert_equal '2', r['c-1']['d 2']
+    assert_equal 1,   r['f'][0]
+    assert_equal 2,   r['f'][1]
+    assert_equal 3,   r['f'][2]['g+1']
+
+    assert_nil r['a_1']
+    assert_nil r['b_2']
+    assert_nil r['c_1']
+    assert_nil r['f'][2]['g_1']
+
+    t = @this.new('test.service', S4)
+    r = t.filter({'a 1' => '1', 'b 2' => 2, 'c-1' => { 'd/1' => '1', 'd 2' => '2' }, 'f' => [1, 2, {'g+1' => 3}] })
+    assert_nil r['a 1']
+    assert_nil r['b 2']
+    assert_nil r['c-1']
+    assert_equal 1, r['f'][0]
+    assert_equal 2, r['f'][1]
+    assert_nil r['f'][2]['g+1']
+
+    assert_equal '1', r['a_1']
+    assert_equal 2,   r['b_2']
+    assert_equal '1', r['c_1']['d_1']
+    assert_equal '2', r['c_1']['d_2']
+    assert_equal 3,   r['f'][2]['g_1']
+  end
 end

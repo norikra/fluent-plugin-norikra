@@ -24,6 +24,7 @@ module Fluent::NorikraPlugin
       @name = target
       @escaped_name = self.class.escape(@name)
       @auto_field = config.auto_field.nil? ? true : config.auto_field
+      @escape_fieldname = config.escape_fieldname
 
       @filter = RecordFilter.new(*([:include, :include_regexp, :exclude, :exclude_regexp].map{|s| config.filter_params[s]}))
       @fields = config.field_definitions
@@ -31,7 +32,30 @@ module Fluent::NorikraPlugin
     end
 
     def filter(record)
-      @filter.filter(record)
+      r = @filter.filter(record)
+      if @escape_fieldname
+        escape_recursive(r)
+      else
+        r
+      end
+    end
+
+    def escape_recursive(record)
+      return record unless record.is_a?(Hash) || record.is_a?(Array)
+      return record.map{|v| escape_recursive(v) } if record.is_a?(Array)
+
+      # Hash
+      r = {}
+      record.keys.each do |key|
+        k = if key =~ /[^$_a-zA-Z0-9]/
+              key.gsub(/[^$_a-zA-Z0-9]/, '_')
+            else
+              key
+            end
+        v = escape_recursive(record[key])
+        r[k] = v
+      end
+      r
     end
 
     def reserve_fields

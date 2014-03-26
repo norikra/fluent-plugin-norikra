@@ -1,6 +1,6 @@
 module Fluent::NorikraPlugin
   class ConfigSection
-    attr_accessor :target, :target_matcher, :auto_field, :filter_params, :field_definitions, :query_generators
+    attr_accessor :target, :target_matcher, :auto_field, :escape_fieldname, :filter_params, :field_definitions, :query_generators
 
     def initialize(section, enable_auto_query=true)
       @target = nil
@@ -16,6 +16,7 @@ module Fluent::NorikraPlugin
       end
 
       @auto_field = Fluent::Config.bool_value(section['auto_field'])
+      @escape_fieldname = Fluent::Config.bool_value(section['escape_fieldname'])
 
       @filter_params = {
         :include => section['include'],

@@ -64,7 +64,10 @@ NorikraOutput plugin opens Norikra's target for newly incoming tags. You can spe
     include *     # send all fields values to norikra
     exclude time  # exclude 'time' field from sending event values
        # AND/OR 'include_regexp' and 'exclude_regexp' available
-    field_integer seq  # field 'seq' defined as integer for all targets
+    field_integer seq    # field 'seq' defined as integer for all targets
+    escape_fieldname yes # Escape field name special chars (non alphabetical or numerical names) with underscore('_')
+                         #  This is friendly for query access (ex: field.key1.cpu_total)
+                         #  Default: no
   </default>
   
   <target users>
