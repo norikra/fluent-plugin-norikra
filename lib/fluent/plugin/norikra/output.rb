@@ -183,7 +183,7 @@ module Fluent::NorikraPlugin
           t
         end
 
-        event = tgt.filter(record)
+        event = tgt.filter(time, record)
 
         out << [tgt.escaped_name,event].to_msgpack
       end

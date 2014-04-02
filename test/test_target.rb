@@ -45,6 +45,7 @@ class TargetTest < Test::Unit::TestCase
       'tag' => 'q3.test'
     }, [])
   C2 = Fluent::Config::Element.new('target', 'test', {
+      'time_key' => 'timestamp',
       'exclude_regexp' => '(f|g)_.*',
       'field_float' => 'd1,d2,d3,d4'
     }, [Q3])
@@ -55,14 +56,16 @@ class TargetTest < Test::Unit::TestCase
 
     assert_equal 'test', t.name
     assert_equal({
-        :string => %w(s1 s2 s3), :boolean => %w(bool1 bool2), :integer => %w(i1 i2 i3 i4 num1 num2),
+        :string => %w(s1 s2 s3), :boolean => %w(bool1 bool2), :integer => %w(i1 i2 i3 i4 num1 num2 timestamp),
         :float => %w(f1 f2 d d1 d2 d3 d4)
       }, t.fields)
     assert_equal 3, t.queries.size
 
-    r = t.filter({'x'=>1,'y'=>'y','z'=>'zett','flag'=>true,'f_x'=>'true','g_1'=>'g'})
-    assert_equal 3, r.size
-    assert_equal({'x'=>1,'y'=>'y','z'=>'zett'}, r)
+    now = Time.now.to_i
+
+    r = t.filter(now, {'x'=>1,'y'=>'y','z'=>'zett','flag'=>true,'f_x'=>'true','g_1'=>'g'})
+    assert_equal 4, r.size
+    assert_equal({'x'=>1,'y'=>'y','z'=>'zett','timestamp'=>(now*1000)}, r)
 
     # reserve_fields
     assert_equal({
@@ -70,7 +73,8 @@ class TargetTest < Test::Unit::TestCase
         'bool1' => 'boolean', 'bool2' => 'boolean',
         'i1' => 'integer', 'i2' => 'integer', 'i3' => 'integer', 'i4' => 'integer', 'num1' => 'integer', 'num2' => 'integer',
         'f1' => 'float', 'f2' => 'float',
-        'd' => 'float', 'd1' => 'float', 'd2' => 'float', 'd3' => 'float', 'd4' => 'float'
+        'd' => 'float', 'd1' => 'float', 'd2' => 'float', 'd3' => 'float', 'd4' => 'float',
+        'timestamp' => 'integer', # time_key
       }, t.reserve_fields)
   end
 
@@ -102,8 +106,10 @@ class TargetTest < Test::Unit::TestCase
   S4 = Fluent::NorikraPlugin::ConfigSection.new(C4)
 
   def test_escape_fieldname
+    now = Time.now.to_i
+
     t = @this.new('test.service', S3)
-    r = t.filter({'a 1' => '1', 'b 2' => 2, 'c-1' => { 'd/1' => '1', 'd 2' => '2' }, 'f' => [1, 2, {'g+1' => 3}] })
+    r = t.filter(now, {'a 1' => '1', 'b 2' => 2, 'c-1' => { 'd/1' => '1', 'd 2' => '2' }, 'f' => [1, 2, {'g+1' => 3}] })
     assert_equal '1', r['a 1']
     assert_equal 2,   r['b 2']
     assert_equal '1', r['c-1']['d/1']
@@ -118,7 +124,7 @@ class TargetTest < Test::Unit::TestCase
     assert_nil r['f'][2]['g_1']
 
     t = @this.new('test.service', S4)
-    r = t.filter({'a 1' => '1', 'b 2' => 2, 'c-1' => { 'd/1' => '1', 'd 2' => '2' }, 'f' => [1, 2, {'g+1' => 3}] })
+    r = t.filter(now, {'a 1' => '1', 'b 2' => 2, 'c-1' => { 'd/1' => '1', 'd 2' => '2' }, 'f' => [1, 2, {'g+1' => 3}] })
     assert_nil r['a 1']
     assert_nil r['b 2']
     assert_nil r['c-1']

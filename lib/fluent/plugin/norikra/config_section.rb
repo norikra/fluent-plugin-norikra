@@ -1,6 +1,8 @@
 module Fluent::NorikraPlugin
   class ConfigSection
-    attr_accessor :target, :target_matcher, :auto_field, :escape_fieldname, :filter_params, :field_definitions, :query_generators
+    attr_accessor :target, :target_matcher
+    attr_accessor :auto_field, :time_key, :escape_fieldname
+    attr_accessor :filter_params, :field_definitions, :query_generators
 
     def initialize(section, enable_auto_query=true)
       @target = nil
@@ -16,6 +18,7 @@ module Fluent::NorikraPlugin
       end
 
       @auto_field = Fluent::Config.bool_value(section['auto_field'])
+      @time_key = section['time_key']
       @escape_fieldname = Fluent::Config.bool_value(section['escape_fieldname'])
 
       @filter_params = {
@@ -49,6 +52,7 @@ module Fluent::NorikraPlugin
       end
       r = self.class.new(Fluent::Config::Element.new('target', (other.target ? other.target : self.target), {}, []))
       r.auto_field = (other.auto_field.nil? ? self.auto_field : other.auto_field)
+      r.time_key = other.time_key || self.time_key
 
       others_filter = {}
       other.filter_params.keys.each do |k|

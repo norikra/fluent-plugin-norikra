@@ -1,6 +1,6 @@
 module Fluent::NorikraPlugin
   class Target
-    attr_accessor :name, :auto_field, :fields, :queries
+    attr_accessor :name, :auto_field, :time_key, :fields, :queries
     attr_reader :escaped_name
 
     def self.escape(src)
@@ -24,15 +24,23 @@ module Fluent::NorikraPlugin
       @name = target
       @escaped_name = self.class.escape(@name)
       @auto_field = config.auto_field.nil? ? true : config.auto_field
+      @time_key = config.time_key
       @escape_fieldname = config.escape_fieldname
 
       @filter = RecordFilter.new(*([:include, :include_regexp, :exclude, :exclude_regexp].map{|s| config.filter_params[s]}))
       @fields = config.field_definitions
+      if @time_key
+        @fields[:integer].push @time_key
+      end
       @queries = config.query_generators.map{|g| g.generate(@name, @escaped_name)}
     end
 
-    def filter(record)
+    def filter(time, record)
       r = @filter.filter(record)
+      if @time_key
+        # Fluentd time (sec) -> Norikra timestamp (milliseconds)
+        r = r.merge({ @time_key => time * 1000 })
+      end
       if @escape_fieldname
         escape_recursive(r)
       else
