@@ -49,6 +49,7 @@ Sends events to remote Norikra server. Minimal configurations are:
 ```
 
 NorikraOutput plugin opens Norikra's target for newly incoming tags. You can specify fields to include/exclude, and specify types of each fields, for each targets (and all targets by `default`). Definitions in `<target TARGET_NAME>` overwrites `<default>` specifications.
+
 ```apache
 <match data.*>
   type    norikra
@@ -82,6 +83,7 @@ NorikraOutput plugin opens Norikra's target for newly incoming tags. You can spe
 With default setting, all fields are defined as 'string', so you must use `field_xxxx` parameters for numerical processing in query (For more details, see Norikra and Esper's documents).
 
 If fluentd's events has so many variations of sets of fields, you can specify not to include fields automatically, with `auto_field` option:
+
 ```apache
 <match data.*>
   type    norikra
@@ -97,6 +99,8 @@ If fluentd's events has so many variations of sets of fields, you can specify no
 ```
 
 Fields which are referred in queries are automatically registered on norikra server in spite of `auto_field false`.
+
+Use `time_key FIELDNAME` to include time of Fluentd's event into data field of Norikra (by milliseconds with Norikra/Esper's rule). This is useful for queries with `.win:ext_timed_batch(FIELD, PERIOD)` views.
 
 ** NOTE: <default> and <target> sections in NorikraOutput ignores <query> sections. see NorikraFilterOutput **
 
