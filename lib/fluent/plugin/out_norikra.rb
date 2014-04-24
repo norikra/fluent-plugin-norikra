@@ -21,6 +21,8 @@ module Fluent
     config_param :target_map_tag, :bool, :default => false
     config_param :target_map_key, :string, :default => nil
     config_param :target_string, :string, :default => nil
+    config_param :drop_error_record, :default => true
+    config_param :drop_server_error_record, :default => false
 
     # <default>
     # <target TARGET>

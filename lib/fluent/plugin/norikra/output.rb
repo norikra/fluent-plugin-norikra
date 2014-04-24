@@ -205,7 +205,15 @@ module Fluent::NorikraPlugin
       c = client()
 
       events_map.each do |target, events|
-        c.send(target, events)
+        begin
+          c.send(target, events)
+        rescue Norikra::RPC::ClientError => e
+          raise unless @drop_error_record
+          log.warn "Norikra server reports ClientError, and dropped", target: target, message: e.message
+        rescue Norikra::RPC::ServerError => e
+          raise unless @drop_server_error_record
+          log.warn "Norikra server reports ServerError, and dropped", target: target, message: e.message
+        end
       end
     end
 
