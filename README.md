@@ -1,6 +1,6 @@
 # fluent-plugin-norikra
 
-Fluentd plugins to send/receive events to/from Norikra server.
+[Fluentd](http://fluentd.org/) plugins to send/receive events to/from Norikra server.
 
 Norikra is an open source server software provides "Stream Processing" with SQL, written in JRuby, runs on JVM, licensed under GPLv2.
 For more details, see: http://norikra.github.io/ .
