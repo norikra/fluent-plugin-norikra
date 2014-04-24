@@ -57,9 +57,15 @@ NorikraOutput plugin opens Norikra's target for newly incoming tags. You can spe
   
   target_map_tag    true  # fluentd's tag -> norikra's target
   remove_tag_prefix data
+  
   # other options:
   #   target_map_key KEY_NAME  # use specified key's value as target in fluentd event
   #   target_string  STRING    # use fixed target name specified
+  #   drop_error_record true   # drop records chunk which includes records to occur ClientError on norikra server
+  #                            #   default: true
+  #                            #   (ex: specified (non-optional) fields missing or invalid value for specified type)
+  #   drop_server_error_record true # drop records chunk when any ServerError occurs
+  #                                 #   default: false (to retry)
   
   <default>
     include *     # send all fields values to norikra
@@ -179,6 +185,7 @@ Configuration example to receive tags like `event.foo` and send norikra's target
       group      count_query_group # or default when omitted
 	  expression SELECT count(*) AS cnt FROM ${target}.win:time_batch(1 minute)
 	  tag        count.min.${target}
+      fetch_interval 10s
 	</query>
     <query>
 	  name       count_hour_${target}
@@ -234,7 +241,7 @@ Norikra's target (like table name) can be generated from:
 
 # TODO
 
-* write abou these topics
+* write about these topics
   * error logs for new target, success logs of retry
 
 # Copyright
