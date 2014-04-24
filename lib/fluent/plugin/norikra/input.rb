@@ -72,7 +72,7 @@ module Fluent::NorikraPlugin
         @fetch_queue.sort!
       end
     rescue => e
-      $log.error "unknown log encountered", :error_class => e.class, :message => e.message
+      log.error "unknown log encountered", :error_class => e.class, :message => e.message
     end
 
     def fetch_worker
@@ -88,7 +88,7 @@ module Fluent::NorikraPlugin
           begin
             data = req.fetch(client())
           rescue => e
-            $log.error "failed to fetch", :norikra => "#{@host}:#{@port}", :method => req.method, :target => req.target, :error => e.class, :message => e.message
+            log.error "failed to fetch", :norikra => "#{@host}:#{@port}", :method => req.method, :target => req.target, :error => e.class, :message => e.message
           end
 
           data.each do |tag, event_array|
@@ -96,7 +96,7 @@ module Fluent::NorikraPlugin
               begin
                 Fluent::Engine.emit(tag, time, event)
               rescue => e
-                $log.error "failed to emit event from norikra query", :norikra => "#{@host}:#{@port}", :error => e.class, :message => e.message, :tag => tag, :record => event
+                log.error "failed to emit event from norikra query", :norikra => "#{@host}:#{@port}", :error => e.class, :message => e.message, :tag => tag, :record => event
               end
             end
           end

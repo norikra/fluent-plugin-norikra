@@ -81,9 +81,9 @@ module Fluent::NorikraPlugin
         targets.each do |t|
           next if @target_map[t.name]
 
-          $log.debug "Preparing norikra target #{t.name} on #{@host}:#{@port}"
+          log.debug "Preparing norikra target #{t.name} on #{@host}:#{@port}"
           if prepare_target(c, t)
-            $log.debug "success to prepare target #{t.name} on #{@host}:#{@port}"
+            log.debug "success to prepare target #{t.name} on #{@host}:#{@port}"
 
             if @enable_auto_query
               raise "bug" unless self.respond_to?(:insert_fetch_queue)
@@ -96,7 +96,7 @@ module Fluent::NorikraPlugin
             @target_map[t.name] = t
             @registered_targets.delete(t.name)
           else
-            $log.error "Failed to prepare norikra data for target:#{t.name}"
+            log.error "Failed to prepare norikra data for target:#{t.name}"
             @norikra_started.push(t)
           end
         end
@@ -105,12 +105,12 @@ module Fluent::NorikraPlugin
 
     def prepare_target(client, target)
       # target open and reserve fields
-      $log.debug "Going to prepare about target"
+      log.debug "Going to prepare about target"
       begin
         unless client.targets.include?(target.escaped_name)
-          $log.debug "opening target #{target.escaped_name}"
+          log.debug "opening target #{target.escaped_name}"
           client.open(target.escaped_name, target.reserve_fields, target.auto_field)
-          $log.debug "opening target #{target.escaped_name}, done."
+          log.debug "opening target #{target.escaped_name}, done."
         end
 
         reserving = target.reserve_fields
@@ -119,7 +119,7 @@ module Fluent::NorikraPlugin
           if reserving[field['name']]
             reserved.push(field['name'])
             if reserving[field['name']] != field['type']
-              $log.warn "field type mismatch, reserving:#{reserving[field['name']]} but reserved:#{field['type']}"
+              log.warn "field type mismatch, reserving:#{reserving[field['name']]} but reserved:#{field['type']}"
             end
           end
         end
@@ -128,7 +128,7 @@ module Fluent::NorikraPlugin
           client.reserve(target.escaped_name, fieldname, type) unless reserved.include?(fieldname)
         end
       rescue => e
-        $log.error "failed to prepare target:#{target.escaped_name}", :norikra => "#{@host}:#{@port}", :error => e.class, :message => e.message
+        log.error "failed to prepare target:#{target.escaped_name}", :norikra => "#{@host}:#{@port}", :error => e.class, :message => e.message
         return false
       end
 
@@ -138,7 +138,7 @@ module Fluent::NorikraPlugin
         target.queries.each do |query|
           if registered.has_key?(query.name) # query already registered
             if registered[query.name] != query.expression
-              $log.warn "query name and expression mismatch, check norikra server status. target query name:#{query.name}"
+              log.warn "query name and expression mismatch, check norikra server status. target query name:#{query.name}"
             end
             next
           end
@@ -148,7 +148,7 @@ module Fluent::NorikraPlugin
           fetch_event_registration(query)
         end
       rescue => e
-        $log.warn "failed to register query", :norikra => "#{@host}:#{@port}", :error => e.class, :message => e.message
+        log.warn "failed to register query", :norikra => "#{@host}:#{@port}", :error => e.class, :message => e.message
       end
     end
 

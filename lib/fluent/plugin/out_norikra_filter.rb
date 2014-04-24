@@ -48,6 +48,11 @@ module Fluent
     #   tag_prefix norikra.query
     # </fetch>
 
+    # Define `log` method for v0.10.42 or earlier
+    unless method_defined?(:log)
+      define_method("log") { $log }
+    end
+
     def configure(conf)
       super
 
@@ -129,7 +134,7 @@ module Fluent
     end
 
     def server_starter
-      $log.info "starting Norikra server process #{@host}:#{@port}"
+      log.info "starting Norikra server process #{@host}:#{@port}"
       base_options = [@execute_server_path, 'start', '-H', @host, '-P', @port.to_s]
       cmd,options = if @execute_jruby_path
                       [@execute_jruby_path, [@execute_server_path, 'start', '-H', @host, '-P', @port.to_s]]
@@ -144,24 +149,24 @@ module Fluent
         exec([cmd, 'norikra(fluentd)'], *options)
       end
       connecting = true
-      $log.info "trying to confirm norikra server status..."
+      log.info "trying to confirm norikra server status..."
       while connecting
         begin
-          $log.debug "start to connect norikra server #{@host}:#{@port}"
+          log.debug "start to connect norikra server #{@host}:#{@port}"
           client(:connect_timeout => 1, :send_timeout => 1, :receive_timeout => 1).targets
           # discard result: no exceptions is success
           connecting = false
           next
         rescue HTTPClient::TimeoutError
-          $log.debug "Norikra server test connection timeout. retrying..."
+          log.debug "Norikra server test connection timeout. retrying..."
         rescue Errno::ECONNREFUSED
-          $log.debug "Norikra server test connection refused. retrying..."
+          log.debug "Norikra server test connection refused. retrying..."
         rescue => e
-          $log.error "unknown error in confirming norikra server, #{e.class}:#{e.message}"
+          log.error "unknown error in confirming norikra server, #{e.class}:#{e.message}"
         end
         sleep 3
       end
-      $log.info "confirmed that norikra server #{@host}:#{@port} started."
+      log.info "confirmed that norikra server #{@host}:#{@port} started."
       @norikra_started = true
     end
 

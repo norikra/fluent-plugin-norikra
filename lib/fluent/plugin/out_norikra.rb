@@ -25,6 +25,11 @@ module Fluent
     # <default>
     # <target TARGET>
 
+    # Define `log` method for v0.10.42 or earlier
+    unless method_defined?(:log)
+      define_method("log") { $log }
+    end
+
     def configure(conf)
       super
 
