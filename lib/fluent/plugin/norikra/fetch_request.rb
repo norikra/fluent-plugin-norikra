@@ -21,7 +21,7 @@ module Fluent::NorikraPlugin
 
       @tag_generator = case tag_type.to_s
                        when 'query_name' then lambda{|query_name,record| raw_tag_prefix + query_name}
-                       when 'field'      then lambda{|query_name,record| raw_tag_prefix + record[tag_arg]}
+                       when 'field'      then lambda{|query_name,record| raw_tag_prefix + (record[tag_arg] || 'NULL')}
                        when 'string'     then lambda{|query_name,record| raw_tag_prefix + tag_arg}
                        else
                          raise "bug"
