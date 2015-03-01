@@ -3,6 +3,7 @@ require 'fluent/plugin/norikra/query_generator'
 
 class QueryGeneratorTest < Test::Unit::TestCase
   def setup
+    Fluent::Test.setup
     @this = Fluent::NorikraPlugin::QueryGenerator
   end
 

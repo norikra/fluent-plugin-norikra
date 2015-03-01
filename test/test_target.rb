@@ -3,6 +3,7 @@ require 'fluent/plugin/norikra/target'
 
 class TargetTest < Test::Unit::TestCase
   def setup
+    Fluent::Test.setup
     @this = Fluent::NorikraPlugin::Target
   end
 

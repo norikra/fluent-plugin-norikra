@@ -3,6 +3,7 @@ require 'fluent/plugin/norikra/config_section'
 
 class ConfigSectionTest < Test::Unit::TestCase
   def setup
+    Fluent::Test.setup
     @this = Fluent::NorikraPlugin::ConfigSection
   end
 

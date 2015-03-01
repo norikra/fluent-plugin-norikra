@@ -3,6 +3,7 @@ require 'fluent/plugin/norikra/record_filter'
 
 class RecordFilterTest < Test::Unit::TestCase
   def setup
+    Fluent::Test.setup
     @this = Fluent::NorikraPlugin::RecordFilter
   end
 
