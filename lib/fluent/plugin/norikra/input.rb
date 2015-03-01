@@ -91,12 +91,15 @@ module Fluent::NorikraPlugin
             log.error "failed to fetch", :norikra => "#{@host}:#{@port}", :method => req.method, :target => req.target, :error => e.class, :message => e.message
           end
 
-          data.each do |tag, event_array|
-            event_array.each do |time,event|
-              begin
-                Fluent::Engine.emit(tag, time, event)
-              rescue => e
-                log.error "failed to emit event from norikra query", :norikra => "#{@host}:#{@port}", :error => e.class, :message => e.message, :tag => tag, :record => event
+          if data
+            data.each do |tag, event_array|
+              next unless event_array
+              event_array.each do |time,event|
+                begin
+                  Fluent::Engine.emit(tag, time, event)
+                rescue => e
+                  log.error "failed to emit event from norikra query", :norikra => "#{@host}:#{@port}", :error => e.class, :message => e.message, :tag => tag, :record => event
+                end
               end
             end
           end
