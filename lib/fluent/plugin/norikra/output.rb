@@ -97,7 +97,6 @@ module Fluent::NorikraPlugin
             @registered_targets.delete(t.name)
           else
             log.error "Failed to prepare norikra data for target:#{t.name}"
-            @norikra_started.push(t)
           end
         end
       end
