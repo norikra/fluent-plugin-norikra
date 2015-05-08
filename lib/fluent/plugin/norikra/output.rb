@@ -213,6 +213,9 @@ module Fluent::NorikraPlugin
         rescue Norikra::RPC::ServerError => e
           raise unless @drop_server_error_record
           log.warn "Norikra server reports ServerError, and dropped", target: target, message: e.message
+        rescue Norikra::RPC::ServiceUnavailableError => e
+          raise unless @drop_when_shutoff
+          log.warn "Norikra server is now in Shutoff mode, and dropped", target: target, message: e.message
         end
       end
     end
