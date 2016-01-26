@@ -40,7 +40,7 @@ For variations, see `example` directory.
 Sends events to remote Norikra server. Minimal configurations are:
 ```apache
 <match data.*>
-  type    norikra
+  @type   norikra
   norikra norikra.server.local:26571
   
   remove_tag_prefix data
@@ -52,7 +52,7 @@ NorikraOutput plugin opens Norikra's target for newly incoming tags. You can spe
 
 ```apache
 <match data.*>
-  type    norikra
+  @type   norikra
   norikra norikra.server.local:26571
   
   target_map_tag    true  # fluentd's tag -> norikra's target
@@ -92,7 +92,7 @@ If fluentd's events has so many variations of sets of fields, you can specify no
 
 ```apache
 <match data.*>
-  type    norikra
+  @type   norikra
   norikra norikra.server.local:26571
   
   target_map_tag    true  # fluentd's tag 'data.event' -> norikra's target 'event'
@@ -117,7 +117,7 @@ Fetch events from Norikra server, and emits these into Fluentd itself. NorikraIn
 Minimal configurations:
 ```apache
 <source>
-  type    norikra
+  @type   norikra
   norikra norikra.server.local:26571
   <fetch>
     method     sweep
@@ -135,7 +135,7 @@ Minimal configurations:
 Available `<fetch>` methods are `event` and `sweep`. `target` parameter is handled as query name for `event`, and as query group name for `sweep`.
 ```apache
 <source>
-  type    norikra
+  @type   norikra
   norikra norikra.server.local:26571
   <fetch>
     method   event
@@ -170,7 +170,7 @@ If you runs Norikra as standalone process, better configurations are to use Nori
 Configuration example to receive tags like `event.foo` and send norikra's target `foo`, and get count of its records per minute, and per hour with built-in Norikra server:
 ```apache
 <match event.*>
-  type    norikra_filter
+  @type   norikra_filter
   <server>
     path    /home/username/.rbenv/versions/jruby-1.7.4/bin/norikra
     # opts  -Xmx2g  # options of 'norikra start'
