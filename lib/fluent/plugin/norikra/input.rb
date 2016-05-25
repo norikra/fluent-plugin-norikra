@@ -96,7 +96,7 @@ module Fluent::NorikraPlugin
               next unless event_array
               event_array.each do |time,event|
                 begin
-                  Fluent::Engine.emit(tag, time, event)
+                  router.emit(tag, time, event)
                 rescue => e
                   log.error "failed to emit event from norikra query", :norikra => "#{@host}:#{@port}", :error => e.class, :message => e.message, :tag => tag, :record => event
                 end
