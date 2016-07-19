@@ -15,6 +15,7 @@ Gem::Specification.new do |spec|
   spec.test_files    = spec.files.grep(%r{^(test|spec|features)/})
   spec.require_paths = ["lib"]
 
+  spec.add_runtime_dependency "rack", "~> 1.6" # to prevent to install rack 2.0 (it requires ruby 2.2.2 or later)
   spec.add_runtime_dependency "norikra-client", ">= 1.4.0"
   spec.add_runtime_dependency "fluentd"
 
