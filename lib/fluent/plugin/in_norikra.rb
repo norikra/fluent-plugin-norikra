@@ -1,3 +1,4 @@
+require 'fluent/input'
 require_relative 'norikra/input'
 
 require 'norikra-client'

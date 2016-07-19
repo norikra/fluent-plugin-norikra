@@ -1,3 +1,4 @@
+require 'fluent/output'
 require_relative 'norikra/output'
 
 require 'norikra-client'
@@ -41,15 +42,6 @@ module Fluent
 
       if !@target_map_tag && @target_map_key.nil? && @target_string.nil?
         raise Fluent::ConfigError, 'target naming not specified (target_map_tag/target_map_key/target_string)'
-      end
-
-      conf.elements.each do |element|
-        case element.name
-        when 'default', 'target'
-          # ignore: processed in OutputMixin
-        else
-          raise Fluent::ConfigError, "unknown configuration section name for this plugin: #{element.name}"
-        end
       end
 
       setup_output(conf, false) # <query> disabled in <default> and <target TARGET>

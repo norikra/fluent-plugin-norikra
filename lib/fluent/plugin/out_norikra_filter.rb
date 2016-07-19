@@ -1,3 +1,4 @@
+require 'fluent/output'
 require_relative 'norikra/input'
 require_relative 'norikra/output'
 
@@ -70,17 +71,11 @@ module Fluent
 
       conf.elements.each do |element|
         case element.name
-        when 'default', 'target'
-          # ignore: processed in OutputMixin
-        when 'fetch'
-          # ignore: processed in InputMixin, and set @fetch_queue
         when 'server'
           @execute_server = true
           @execute_jruby_path = element['jruby']
           @execute_server_path = element['path']
           @execute_server_opts = element['opts']
-        else
-          raise Fluent::ConfigError, "unknown configuration section name for this plugin: #{element.name}"
         end
       end
 
