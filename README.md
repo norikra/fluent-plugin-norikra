@@ -1,4 +1,4 @@
-# fluent-plugin-norikra
+# fluent-plugin-norikra, a plugin for [Fluentd](http://fluentd.org)
 
 [Fluentd](http://fluentd.org/) plugins to send/receive events to/from Norikra server.
 
