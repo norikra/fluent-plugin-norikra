@@ -68,5 +68,12 @@ module Fluent
     def fetchable?
       true
     end
+
+    # For Fluentd 0.14 compatibility.
+    # Fluent::Compat::BufferedOutput expects the plugin class itself
+    # (but not its included module) to define `format_stream` when overriding.
+    def format_stream(*)
+      super
+    end
   end
 end
