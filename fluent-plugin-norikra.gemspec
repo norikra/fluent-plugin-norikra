@@ -2,7 +2,7 @@
 
 Gem::Specification.new do |spec|
   spec.name          = "fluent-plugin-norikra"
-  spec.version       = "0.4.3"
+  spec.version       = "0.4.4"
   spec.authors       = ["TAGOMORI Satoshi"]
   spec.email         = ["tagomoris@gmail.com"]
   spec.description   = %q{process events on fluentd with SQL like query, with built-in Norikra server if needed.}
@@ -17,7 +17,7 @@ Gem::Specification.new do |spec|
 
   spec.add_runtime_dependency "rack", "~> 1.6" # to prevent to install rack 2.0 (it requires ruby 2.2.2 or later)
   spec.add_runtime_dependency "norikra-client", ">= 1.4.0"
-  spec.add_runtime_dependency "fluentd"
+  spec.add_runtime_dependency "fluentd", "< 0.14.0"
 
   spec.add_development_dependency "bundler", "~> 1.3"
   spec.add_development_dependency "rake"
