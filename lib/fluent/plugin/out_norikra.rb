@@ -11,28 +11,23 @@ module Fluent
 
     config_set_default :flush_interval, 1 # 1sec
 
-    config_param :norikra, :string, :default => 'localhost:26571'
+    config_param :norikra, :string, default: 'localhost:26571'
 
-    config_param :connect_timeout, :integer, :default => nil
-    config_param :send_timeout, :integer, :default => nil
-    config_param :receive_timeout, :integer, :default => nil
+    config_param :connect_timeout, :integer, default: nil
+    config_param :send_timeout, :integer, default: nil
+    config_param :receive_timeout, :integer, default: nil
 
     #for OutputMixin
-    config_param :remove_tag_prefix, :string, :default => nil
-    config_param :target_map_tag, :bool, :default => false
-    config_param :target_map_key, :string, :default => nil
-    config_param :target_string, :string, :default => nil
-    config_param :drop_error_record, :bool, :default => true
-    config_param :drop_server_error_record, :bool, :default => false
-    config_param :drop_when_shutoff, :bool, :default => false
+    config_param :remove_tag_prefix, :string, default: nil
+    config_param :target_map_tag, :bool, default: false
+    config_param :target_map_key, :string, default: nil
+    config_param :target_string, :string, default: nil
+    config_param :drop_error_record, :bool, default: true
+    config_param :drop_server_error_record, :bool, default: false
+    config_param :drop_when_shutoff, :bool, default: false
 
     # <default>
     # <target TARGET>
-
-    # Define `log` method for v0.10.42 or earlier
-    unless method_defined?(:log)
-      define_method("log") { $log }
-    end
 
     def configure(conf)
       super
@@ -49,9 +44,9 @@ module Fluent
 
     def client(opts={})
       Norikra::Client.new(@host, @port, {
-          :connect_timeout => opts[:connect_timeout] || @connect_timeout,
-          :send_timeout    => opts[:send_timeout]    || @send_timeout,
-          :receive_timeout => opts[:receive_timeout] || @receive_timeout,
+          connect_timeout: opts[:connect_timeout] || @connect_timeout,
+          send_timeout: opts[:send_timeout] || @send_timeout,
+          receive_timeout: opts[:receive_timeout] || @receive_timeout,
         })
     end
 

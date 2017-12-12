@@ -9,11 +9,11 @@ module Fluent
 
     Fluent::Plugin.register_input('norikra', self)
 
-    config_param :norikra, :string, :default => 'localhost:26571'
+    config_param :norikra, :string, default: 'localhost:26571'
 
-    config_param :connect_timeout, :integer, :default => nil
-    config_param :send_timeout, :integer, :default => nil
-    config_param :receive_timeout, :integer, :default => nil
+    config_param :connect_timeout, :integer, default: nil
+    config_param :send_timeout, :integer, default: nil
+    config_param :receive_timeout, :integer, default: nil
 
     # <fetch> tags
     # <fetch>
@@ -32,11 +32,6 @@ module Fluent
     #   tag field group_by_key
     #   tag_prefix norikra.query
     # </fetch>
-
-    # Define `log` method for v0.10.42 or earlier
-    unless method_defined?(:log)
-      define_method("log") { $log }
-    end
 
     def configure(conf)
       super
@@ -58,9 +53,9 @@ module Fluent
 
     def client(opts={})
       Norikra::Client.new(@host, @port, {
-          :connect_timeout => opts[:connect_timeout] || @connect_timeout,
-          :send_timeout    => opts[:send_timeout]    || @send_timeout,
-          :receive_timeout => opts[:receive_timeout] || @receive_timeout,
+          connect_timeout: opts[:connect_timeout] || @connect_timeout,
+          send_timeout: opts[:send_timeout] || @send_timeout,
+          receive_timeout: opts[:receive_timeout] || @receive_timeout,
         })
     end
 
