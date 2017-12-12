@@ -1,17 +1,14 @@
 module Fluent::NorikraPlugin
   class FetchRequest
-    METHODS = [:event, :sweep]
     TAG_TYPES = ['query_name', 'field', 'string']
 
     attr_accessor :method, :target, :interval, :tag_generator, :tag_prefix
     attr_accessor :time
 
     def initialize(method, target, interval, tag_type, tag_arg, tag_prefix)
-      raise ArgumentError, "unknown method '#{method}'" unless METHODS.include?(method.to_sym)
-
-      @method = method.to_sym
+      @method = method
       @target = target
-      @interval = interval.to_i
+      @interval = interval
 
       raise ArgumentError, "unknown tag type specifier '#{tag_type}'" unless TAG_TYPES.include?(tag_type.to_s)
       raw_tag_prefix = tag_prefix.to_s
@@ -24,7 +21,7 @@ module Fluent::NorikraPlugin
                        when 'field'      then lambda{|query_name,record| raw_tag_prefix + (record[tag_arg] || 'NULL')}
                        when 'string'     then lambda{|query_name,record| raw_tag_prefix + tag_arg}
                        else
-                         raise "bug"
+                         raise "BUG: unknown tag_type: #{tag_type}"
                        end
       @time = Time.now + 1 # should be fetched soon ( 1sec later )
     end

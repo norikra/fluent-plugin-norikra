@@ -38,8 +38,8 @@ module Fluent::Plugin
         tag_type, tag_arg = f.tag.split(/\s+/, 2)
         @fetch_queue << FetchRequest.new(f.method, f.target, f.interval, tag_type, tag_arg, f.tag_prefix)
       end
-      # sort to execute shorter request at first
-      @fetch_queue.sort_by!(&:interval)
+      # sort to execute most recent request at first (using FetchRequest#<=>)
+      @fetch_queue.sort!
 
       @fetch_queue_mutex = Mutex.new
       @client = Norikra::Client.new(@host, @port, connect_timeout: @connect_timeout, send_timeout: @send_timeout, receive_timeout: @receive_timeout)
