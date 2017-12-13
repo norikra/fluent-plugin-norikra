@@ -1,15 +1,14 @@
 require 'fluent/plugin/output'
 
-require 'fluent/output'
 require 'norikra-client'
 
-require_relative 'config_section'
-require_relative 'query'
-require_relative 'query_generator'
-require_relative 'record_filter'
-require_relative 'target'
+require_relative 'norikra/config_section'
+require_relative 'norikra/query'
+require_relative 'norikra/query_generator'
+require_relative 'norikra/record_filter'
+require_relative 'norikra/target'
 
-require_relative 'fetch_request'
+require_relative 'norikra/fetch_request'
 
 module Fluent::Plugin
   class NorikraOutput < Fluent::Plugin::Output
@@ -23,7 +22,6 @@ module Fluent::Plugin
     config_param :send_timeout, :integer, default: nil
     config_param :receive_timeout, :integer, default: nil
 
-    #for OutputMixin
     config_param :remove_tag_prefix, :string, default: nil
     config_param :target_map_tag, :bool, default: false
     config_param :target_map_key, :string, default: nil
@@ -46,35 +44,6 @@ module Fluent::Plugin
       end
 
       setup_output(conf, false) # <query> disabled in <default> and <target TARGET>
-    end
-
-    def client(opts={})
-      Norikra::Client.new(@host, @port, {
-          connect_timeout: opts[:connect_timeout] || @connect_timeout,
-          send_timeout: opts[:send_timeout] || @send_timeout,
-          receive_timeout: opts[:receive_timeout] || @receive_timeout,
-        })
-    end
-
-    def start
-      super
-      start_output
-    end
-
-    def shutdown
-      stop_output
-      shutdown_output
-    end
-
-    def fetchable?
-      true
-    end
-
-    # For Fluentd 0.14 compatibility.
-    # Fluent::Compat::BufferedOutput expects the plugin class itself
-    # (but not its included module) to define `format_stream` when overriding.
-    def format_stream(*)
-      super
     end
 
     def setup_output(conf, enable_auto_query)
@@ -111,26 +80,26 @@ module Fluent::Plugin
       end
 
       @target_mutex = Mutex.new
+      @client = Norikra::Client.new(@host, @port, connect_timeout: @connect_timeout, send_timeout: @send_timeout, receive_timeout: @receive_timeout)
     end
 
-    def start_output
+    def start
+      super
       @register_worker_running = true
       @register_queue = []
       @registered_targets = {}
       @register_thread = Thread.new(&method(:register_worker))
     end
 
-    def stop_output
+    def shutdown
       @register_worker_running = false
-    end
-
-    def shutdown_output
       # @register_thread.kill
       @register_thread.join
+      super
     end
 
     def prepared?(target_names)
-      fetchable? && target_names.reduce(true){|r,t| r && @target_map.values.any?{|target| target.escaped_name == t}}
+      target_names.reduce(true){|r,t| r && @target_map.values.any?{|target| target.escaped_name == t}}
     end
 
     def fetch_event_registration(query)
